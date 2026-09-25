@@ -86,7 +86,7 @@ def _dhash64(image: Image.Image) -> str:
     return f"{value:016x}"
 
 
-def _read_metadata(path: Path) -> pd.DataFrame:
+def read_metadata(path: Path) -> pd.DataFrame:
     suffix = path.suffix.lower()
     if suffix == ".csv":
         return pd.read_csv(path, dtype=str, keep_default_na=False, na_filter=False)
@@ -347,7 +347,7 @@ def build_manifest(spec: DatasetSpec) -> ManifestArtifact:
     if not spec.data_root.is_dir():
         raise FileNotFoundError(f"dataset root not found: {spec.data_root}")
 
-    frame = _read_metadata(spec.metadata_path)
+    frame = read_metadata(spec.metadata_path)
     _validate_metadata(frame, spec)
     carry_columns = _carry_columns(spec)
     index = _image_index(spec)

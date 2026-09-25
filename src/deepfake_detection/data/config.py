@@ -124,14 +124,14 @@ class DatasetSpec:
         return hashlib.sha256(encoded).hexdigest()
 
 
-def _project_root(start: Path) -> Path:
+def find_project_root(start: Path) -> Path:
     for candidate in (start, *start.parents):
         if (candidate / "pyproject.toml").is_file():
             return candidate
     return Path.cwd().resolve()
 
 
-def _expand_path(value: str, base: Path) -> Path:
+def expand_path(value: str, base: Path) -> Path:
     expanded = os.path.expanduser(os.path.expandvars(value))
     path = Path(expanded)
     return (path if path.is_absolute() else base / path).resolve()
@@ -166,13 +166,13 @@ def load_dataset_spec(
     root = (
         Path(project_root).resolve()
         if project_root is not None
-        else _project_root(resolved_config.parent)
+        else find_project_root(resolved_config.parent)
     )
-    data_root = _expand_path(str(dataset["data_root"]), root)
+    data_root = expand_path(str(dataset["data_root"]), root)
     metadata_value = str(dataset["metadata_path"])
-    metadata_path = _expand_path(metadata_value, data_root)
-    output_root = _expand_path(str(dataset.get("output_root", "data/manifests")), root)
-    report_root = _expand_path(str(dataset.get("report_root", "reports/data_audit")), root)
+    metadata_path = expand_path(metadata_value, data_root)
+    output_root = expand_path(str(dataset.get("output_root", "data/manifests")), root)
+    report_root = expand_path(str(dataset.get("report_root", "reports/data_audit")), root)
 
     gates_raw = dataset.get("quality_gates", {}) or {}
     if not isinstance(gates_raw, dict):

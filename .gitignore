@@ -25,6 +25,7 @@ data/raw/**
 data/interim/**
 data/processed/**
 data/manifests/**
+data/subsets/**
 reports/data_audit/**
 artifacts/**
 checkpoints/**
@@ -34,4 +35,5 @@ models/**/*.pth
 # Keep documented empty directories
 !data/raw/.gitkeep
 !data/manifests/.gitkeep
+!data/subsets/.gitkeep
 !reports/data_audit/.gitkeep

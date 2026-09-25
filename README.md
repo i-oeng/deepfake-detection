@@ -11,6 +11,7 @@ mutable data directory directly.
 configs/datasets/       Dataset-specific audit configuration
 data/raw/               Local source data (ignored by Git)
 data/manifests/         Generated immutable manifests (ignored by Git)
+data/subsets/           Generated pre-download selections (ignored by Git)
 notebooks/              Thin exploratory notebooks
 reports/data_audit/     Deterministic audit reports (ignored by Git)
 src/deepfake_detection/ Reusable Python package
@@ -86,6 +87,37 @@ initial `df40.yaml` config audits a normalized flat metadata file named
 `split`, source domain, video/identity group, manipulation family, and method.
 Do not randomly split extracted frames. The normalization adapter will be added
 after the exact downloaded DF40 layout is fixed.
+
+### Select a DF40 pilot before downloading images
+
+The deterministic subset sampler operates on the normalized metadata catalog,
+so it does not require the full image payload. The catalog must contain:
+
+```text
+image_id, relative_path, label, split, fake_method,
+manipulation_family, source_domain, video_id, identity_id, frame_index
+```
+
+Canonical fake-method slugs used by the pilot are `simswap`, `wav2lip`,
+`stylegan2`, `sd21`, `blendface`, `sadtalker`, `dit`, and `starganv2`.
+
+```powershell
+deepfake-data subset --config configs/subsets/df40_pilot.yaml
+deepfake-data verify-subset --subset-dir <subset-directory>
+```
+
+Selection is independent of source row order. Groups are ranked using the
+configured seed; videos are kept in their official split; and frames are chosen
+at evenly spaced positions. Real samples are balanced per source domain. The
+result is stored at
+`data/subsets/df40/df40_pilot_v1/<subset-id>/subset.csv` with checksums and a
+summary in `subset.json`.
+
+The supplied pilot targets up to 2,500 images per training method, 500 per
+validation method, and 1,000 per unseen test method. Quota shortfalls are
+recorded rather than hidden. Set `strict_quotas: true` before freezing final
+report experiments. With complete quotas and 1:1 real/fake balancing, the
+selection contains at most 32,000 images.
 
 ## Notebook
 

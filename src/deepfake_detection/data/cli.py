@@ -9,6 +9,7 @@ from pathlib import Path
 from .audit import audit_manifest, write_audit_report
 from .config import load_dataset_spec
 from .manifest import build_manifest, verify_manifest
+from .subset import build_subset, load_subset_spec, verify_subset
 
 
 def _build(args: argparse.Namespace) -> int:
@@ -58,6 +59,29 @@ def _verify(args: argparse.Namespace) -> int:
     return 0 if valid else 2
 
 
+def _subset(args: argparse.Namespace) -> int:
+    spec = load_subset_spec(args.config)
+    artifact = build_subset(spec)
+    print(
+        json.dumps(
+            {
+                "subset_id": artifact.subset_id,
+                "subset": str(artifact.subset_path),
+                "rows": artifact.row_count,
+                "reused": artifact.reused_existing,
+            },
+            indent=2,
+        )
+    )
+    return 0
+
+
+def _verify_subset(args: argparse.Namespace) -> int:
+    valid, errors = verify_subset(args.subset_dir)
+    print(json.dumps({"valid": valid, "errors": errors}, indent=2))
+    return 0 if valid else 2
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="deepfake-data",
@@ -88,6 +112,20 @@ def build_parser() -> argparse.ArgumentParser:
     verify = subparsers.add_parser("verify", help="Verify an immutable manifest's checksums")
     verify.add_argument("--manifest-dir", type=Path, required=True)
     verify.set_defaults(handler=_verify)
+
+    subset = subparsers.add_parser(
+        "subset",
+        help="Create a deterministic pre-download subset from a metadata catalog",
+    )
+    subset.add_argument("--config", type=Path, required=True)
+    subset.set_defaults(handler=_subset)
+
+    verify_subset_parser = subparsers.add_parser(
+        "verify-subset",
+        help="Verify an immutable subset artifact's checksums",
+    )
+    verify_subset_parser.add_argument("--subset-dir", type=Path, required=True)
+    verify_subset_parser.set_defaults(handler=_verify_subset)
     return parser
 
 
