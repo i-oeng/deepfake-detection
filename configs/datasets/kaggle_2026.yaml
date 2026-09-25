@@ -1,0 +1,54 @@
+dataset:
+  name: kaggle_2026
+  version: "2026"
+  data_root: data/raw/kaggle_2026
+  metadata_path: FINAL_DATASET.csv
+  output_root: data/manifests
+  report_root: reports/data_audit
+
+  id_column: image_id
+  label_column: label
+  split_column: split
+
+  # Downloaded files may live in any subdirectory below images and retain any
+  # supported extension. Every image_id must resolve to exactly one file.
+  lookup_by_stem_column: image_id
+  image_glob: images/**/*
+
+  metadata_columns:
+    - image_url
+    - category
+    - gender
+    - age_group
+    - source
+    - image_quality
+    - detection_difficulty
+    - confidence_score
+    - fake_method
+
+  # This dataset does not expose a trustworthy identity/video grouping key.
+  # Exact/pixel/perceptual hashes are therefore the cross-split leakage guards.
+  group_columns: []
+  leakage_check_columns:
+    - category
+    - source
+    - image_quality
+    - detection_difficulty
+    - fake_method
+
+  expected_labels: [REAL, FAKE]
+  expected_splits: [train, validation, test]
+  workers: 8
+
+  quality_gates:
+    max_missing_images: 0
+    max_decode_errors: 0
+    max_ambiguous_paths: 0
+    max_cross_split_exact_groups: 0
+    max_cross_split_pixel_groups: 0
+    max_cross_split_perceptual_groups: 0
+    max_group_overlap_values: 0
+    fail_on_unexpected_labels: true
+    fail_on_unexpected_splits: true
+    fail_on_suspicious_leakage: false
+    leakage_purity_threshold: 0.98

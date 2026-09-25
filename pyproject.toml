@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "deepfake-detection"
+version = "0.1.0"
+description = "Reproducible RGB and frequency-domain deepfake detection experiments"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "pandas>=2.2,<3.0",
+  "Pillow>=10.0,<13.0",
+  "PyYAML>=6.0,<7.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0,<10.0",
+  "ruff>=0.9,<1.0",
+]
+notebook = [
+  "ipykernel>=6.29,<8.0",
+  "jupyterlab>=4.0,<5.0",
+  "matplotlib>=3.8,<4.0",
+]
+
+[project.scripts]
+deepfake-data = "deepfake_detection.data.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

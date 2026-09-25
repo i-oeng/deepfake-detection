@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.venv/
+.tmp/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Local secrets
+.env
+kaggle.json
+
+# Dataset payloads and generated artifacts
+data/raw/**
+data/interim/**
+data/processed/**
+data/manifests/**
+reports/data_audit/**
+artifacts/**
+checkpoints/**
+models/**/*.pt
+models/**/*.pth
+
+# Keep documented empty directories
+!data/raw/.gitkeep
+!data/manifests/.gitkeep
+!reports/data_audit/.gitkeep
