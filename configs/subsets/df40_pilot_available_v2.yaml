@@ -1,0 +1,41 @@
+subset:
+  name: df40_pilot_available_v2
+  source_dataset: df40
+  source_metadata: data/raw/df40/metadata_available.csv
+  output_root: data/subsets
+  seed: "20260925"
+
+  id_column: image_id
+  path_column: relative_path
+  label_column: label
+  split_column: split
+  method_column: fake_method
+  family_column: manipulation_family
+  domain_column: source_domain
+  frame_order_column: frame_index
+  group_columns: [video_id, identity_id, image_id]
+
+  fake_label: FAKE
+  real_label: REAL
+  real_to_fake_ratio: 1.0
+  require_disjoint_train_test_methods: true
+  strict_quotas: true
+
+  # SD-2.1 validation is omitted because the official archive is rate-limited.
+  # Training and test methods remain disjoint to measure generalization.
+  splits:
+    train:
+      fake_methods: [simswap, wav2lip, stylegan2, sd21]
+      max_images_per_method: 2500
+      max_groups_per_method: 2500
+      max_frames_per_group: 20
+    validation:
+      fake_methods: [simswap, wav2lip, stylegan2]
+      max_images_per_method: 500
+      max_groups_per_method: 500
+      max_frames_per_group: 20
+    test:
+      fake_methods: [blendface, sadtalker, dit, starganv2]
+      max_images_per_method: 1000
+      max_groups_per_method: 1000
+      max_frames_per_group: 20

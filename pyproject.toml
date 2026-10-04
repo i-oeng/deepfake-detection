@@ -24,6 +24,9 @@ notebook = [
   "jupyterlab>=4.0,<5.0",
   "matplotlib>=3.8,<4.0",
 ]
+download = [
+  "gdown>=5.2,<6.0",
+]
 
 [project.scripts]
 deepfake-data = "deepfake_detection.data.cli:main"

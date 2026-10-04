@@ -1,0 +1,3 @@
+# Zero-byte members observed in the official StarGANv2 archive.
+deepfakes_detection_datasets/DF40/starganv2/fake/1096.jpg
+deepfakes_detection_datasets/DF40/starganv2/real/1132.jpg

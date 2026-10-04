@@ -14,6 +14,7 @@ data/manifests/         Generated immutable manifests (ignored by Git)
 data/subsets/           Generated pre-download selections (ignored by Git)
 notebooks/              Thin exploratory notebooks
 reports/data_audit/     Deterministic audit reports (ignored by Git)
+scripts/                 DF40 normalization, selective download, and verification tools
 src/deepfake_detection/ Reusable Python package
 tests/                  Unit and integration tests
 ```
@@ -82,11 +83,10 @@ usable in CI.
 ## DF40
 
 DF40's official metadata JSON is hierarchical and varies by protocol. The
-initial `df40.yaml` config audits a normalized flat metadata file named
-`metadata.csv`. Create one row per image while preserving the official
-`split`, source domain, video/identity group, manipulation family, and method.
-Do not randomly split extracted frames. The normalization adapter will be added
-after the exact downloaded DF40 layout is fixed.
+`scripts/normalize_df40.py` adapter creates the flat metadata catalog consumed
+by the audit and subset commands. It preserves the official fake splits and
+deterministically partitions unique real-video groups, preventing frames from
+one real video from leaking between splits.
 
 ### Select a DF40 pilot before downloading images
 
@@ -118,6 +118,46 @@ validation method, and 1,000 per unseen test method. Quota shortfalls are
 recorded rather than hidden. Set `strict_quotas: true` before freezing final
 report experiments. With complete quotas and 1:1 real/fake balancing, the
 selection contains at most 32,000 images.
+
+### Reproduce the available 31,000-image pilot
+
+Obtain the `dataset_json` directory from the
+[official DF40 repository](https://github.com/YZY-stack/DF40), then place it at
+`data/raw/df40/official_json/dataset_json`. Normalize the catalog while excluding
+two zero-byte members observed in the official StarGANv2 archive:
+
+```bash
+python scripts/normalize_df40.py \
+  --output data/raw/df40/metadata_available.csv \
+  --exclude-paths configs/datasets/df40_unavailable_paths.txt
+
+deepfake-data subset --config configs/subsets/df40_pilot_available_v2.yaml
+```
+
+The final configuration selects 20,000 training, 3,000 validation, and 8,000
+test images with equal real/fake counts. SD-2.1 validation is intentionally
+omitted because the official archive is rate-limited. Test manipulation methods
+remain disjoint from training and validation methods.
+
+Install the optional downloader, then pass the generated `subset.csv` path to
+the selective downloader. Archives are deleted after successful extraction, so
+the full DF40 payload is never stored at once:
+
+```bash
+python -m pip install -e ".[download]"
+scripts/download_df40_pilot.sh \
+  data/subsets/df40/df40_pilot_available_v2/<subset-id>/subset.csv
+
+deepfake-data verify-subset \
+  --subset-dir data/subsets/df40/df40_pilot_available_v2/<subset-id>
+python scripts/verify_df40_images.py \
+  --subset data/subsets/df40/df40_pilot_available_v2/<subset-id>/subset.csv \
+  --data-root data/raw/df40
+```
+
+Generated catalogs, subsets, archives, and image payloads remain ignored by
+Git. Only the code and deterministic selection configuration belong in the
+repository.
 
 ## Notebook
 
