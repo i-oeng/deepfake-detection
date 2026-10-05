@@ -296,6 +296,15 @@ def _prepare_catalog(frame: pd.DataFrame, spec: SubsetSpec) -> pd.DataFrame:
     if not overlapping.empty:
         examples = ", ".join(overlapping.index.astype(str).tolist()[:5])
         raise ValueError(f"group values cross source splits: {examples}")
+    # The fallback selection group alone is insufficient: a video ID may be
+    # unique while the same person appears in another split under another ID.
+    for column in spec.group_columns:
+        values = catalog.loc[catalog[column] != "", [column, spec.split_column]]
+        overlap = values.groupby(column, sort=True)[spec.split_column].nunique()
+        repeated = overlap[overlap > 1]
+        if not repeated.empty:
+            examples = ", ".join(repeated.index.astype(str).tolist()[:5])
+            raise ValueError(f"{column} values cross source splits: {examples}")
     return catalog
 
 
