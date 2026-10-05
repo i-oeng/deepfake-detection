@@ -8,6 +8,7 @@ from pathlib import Path
 
 from .audit import audit_manifest, write_audit_report
 from .config import load_dataset_spec
+from .df40 import normalize_df40
 from .manifest import build_manifest, verify_manifest
 from .subset import build_subset, load_subset_spec, verify_subset
 
@@ -82,6 +83,12 @@ def _verify_subset(args: argparse.Namespace) -> int:
     return 0 if valid else 2
 
 
+def _normalize_df40(args: argparse.Namespace) -> int:
+    result = normalize_df40(args.input_dir, args.output)
+    print(json.dumps(result, indent=2))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="deepfake-data",
@@ -126,6 +133,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     verify_subset_parser.add_argument("--subset-dir", type=Path, required=True)
     verify_subset_parser.set_defaults(handler=_verify_subset)
+
+    normalize = subparsers.add_parser(
+        "normalize-df40", help="Normalize official DF40 JSON frame catalogs"
+    )
+    normalize.add_argument("--input-dir", type=Path, required=True)
+    normalize.add_argument("--output", type=Path, required=True)
+    normalize.set_defaults(handler=_normalize_df40)
     return parser
 
 

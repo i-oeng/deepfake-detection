@@ -81,12 +81,23 @@ usable in CI.
 
 ## DF40
 
-DF40's official metadata JSON is hierarchical and varies by protocol. The
-initial `df40.yaml` config audits a normalized flat metadata file named
-`metadata.csv`. Create one row per image while preserving the official
-`split`, source domain, video/identity group, manipulation family, and method.
-Do not randomly split extracted frames. The normalization adapter will be added
-after the exact downloaded DF40 layout is fixed.
+DF40's official `dataset_json` files are hierarchical. Download the method
+JSON files from the [DF40 project](https://github.com/YZY-stack/DF40) into
+`data/raw/df40/official_json/`. The pilot adapter accepts the FF and CDF
+variants of SimSwap, Wav2Lip, StyleGAN2, SD-2.1, BlendFace, SadTalker, and DiT,
+plus `starganv2.json`. Do not include aggregate files such as `DF40_all.json`.
+
+```powershell
+deepfake-data normalize-df40 --input-dir data/raw/df40/official_json --output data/raw/df40/metadata.csv
+```
+
+The adapter retains each official frame path in `source_path` and assigns a
+portable `relative_path` under `images/`. This is a destination for downloaded
+or extracted frames; normalization does not copy image bytes. It deduplicates
+real frames repeated in several method JSONs and rejects any frame assigned to
+conflicting splits or labels. The official JSONs do not consistently identify
+people, so absent `identity_id` values stay empty. A passing manifest still
+requires a separate identity audit before reportable training.
 
 ### Select a DF40 pilot before downloading images
 

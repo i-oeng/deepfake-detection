@@ -196,6 +196,19 @@ def test_subset_rejects_group_leakage_across_splits(tmp_path: Path) -> None:
         build_subset(spec)
 
 
+def test_subset_checks_identity_even_when_video_ids_differ(tmp_path: Path) -> None:
+    config_path, metadata_path = _fixture_project(tmp_path)
+    source = pd.read_csv(metadata_path, dtype=str, keep_default_na=False)
+    train_identity = source.loc[source["split"] == "train", "identity_id"].iloc[0]
+    test_index = source.index[source["split"] == "test"][0]
+    source.loc[test_index, "identity_id"] = train_identity
+    source.to_csv(metadata_path, index=False, lineterminator="\n")
+
+    spec = load_subset_spec(config_path, project_root=tmp_path)
+    with pytest.raises(ValueError, match="identity_id values cross source splits"):
+        build_subset(spec)
+
+
 def test_subset_rejects_seen_method_in_unseen_test(tmp_path: Path) -> None:
     config_path, _ = _fixture_project(tmp_path)
     config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
