@@ -6,61 +6,7 @@ import math
 import random
 from collections import defaultdict
 
-from .metrics import auroc
-
-
-def average_precision(labels: list[int], scores: list[float]) -> float:
-    positives = sum(labels)
-    if positives == 0 or positives == len(labels):
-        raise ValueError("average precision requires both classes")
-    ordered = sorted(zip(scores, labels, strict=True), reverse=True)
-    true_positive = rank = 0
-    area = 0.0
-    for score in sorted(set(scores), reverse=True):
-        group = [label for value, label in ordered if value == score]
-        rank += len(group)
-        gained = sum(group)
-        true_positive += gained
-        area += gained * true_positive / rank
-    return area / positives
-
-
-def tpr_at_fpr(labels: list[int], scores: list[float], maximum_fpr: float = 0.01) -> float:
-    positives, negatives = sum(labels), len(labels) - sum(labels)
-    if not positives or not negatives:
-        raise ValueError("TPR requires both classes")
-    best = 0.0
-    for threshold in sorted(set(scores), reverse=True):
-        fp = sum(
-            score >= threshold and not label for label, score in zip(labels, scores, strict=True)
-        )
-        if fp / negatives <= maximum_fpr:
-            tp = sum(
-                score >= threshold and bool(label)
-                for label, score in zip(labels, scores, strict=True)
-            )
-            best = max(best, tp / positives)
-    return best
-
-
-def calibration(labels: list[int], scores: list[float], bins: int = 10) -> dict[str, float]:
-    brier = sum((score - label) ** 2 for label, score in zip(labels, scores, strict=True)) / len(
-        labels
-    )
-    groups: dict[int, list[tuple[int, float]]] = defaultdict(list)
-    for label, score in zip(labels, scores, strict=True):
-        groups[min(int(score * bins), bins - 1)].append((label, score))
-    ece = 0.0
-    for group in groups.values():
-        ece += (
-            len(group)
-            / len(labels)
-            * abs(
-                sum(score for _, score in group) / len(group)
-                - sum(label for label, _ in group) / len(group)
-            )
-        )
-    return {"brier": brier, "ece_10": ece}
+from .metrics import auroc, average_precision, calibration, tpr_at_fpr
 
 
 def _metrics(rows: list[dict]) -> dict:
