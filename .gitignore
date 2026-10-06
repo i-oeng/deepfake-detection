@@ -32,6 +32,7 @@ runtime/**
 checkpoints/**
 models/**/*.pt
 models/**/*.pth
+reports/fusion/**/gated-*.pt
 
 # Keep documented empty directories
 !data/raw/.gitkeep

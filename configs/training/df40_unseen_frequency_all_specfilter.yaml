@@ -1,0 +1,19 @@
+experiment:
+  manifest_dir: data/manifests/df40_unseen_clean_v3/07f906d9ef61a537efa8
+  manifest_id: 07f906d9ef61a537efa8
+  manifest_sha256: 07f906d9ef61a537efa81be8da1ba1a568bb8fc339380a2987ad8ac717e73dff
+  data_root: data/raw/df40
+  output_root: artifacts/benchmark
+  seed: 20261006
+  require_cuda: true
+  model: frequency_resnet18
+  # Spectral channels derived inside the model from the shared RGB crops; see train/frequency.py.
+  frequency_inputs: [log_amplitude, phase, highpass]
+  feature_fft: true
+  batch_size: 64
+  workers: 4
+  # The spectral stem starts far from ImageNet statistics, so allow more epochs than RGB ResNet18.
+  epochs: 8
+  patience: 3
+  lr: 0.0001
+  weight_decay: 0.0001
