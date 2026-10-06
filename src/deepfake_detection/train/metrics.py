@@ -26,6 +26,103 @@ def auroc(labels: list[int], scores: list[float]) -> float:
     return (positive_ranks - positives * (positives + 1) / 2) / (positives * negatives)
 
 
+def _descending_counts(labels: list[int], scores: list[float]) -> list[tuple[int, int]]:
+    """Cumulative (true positive, false positive) counts at each distinct score, highest first.
+
+    Each entry is the confusion state for the threshold ``score >= value``; tied scores
+    always move together, so no ordering among ties is assumed.
+    """
+    ordered = sorted(zip(scores, labels, strict=True), reverse=True)
+    counts: list[tuple[int, int]] = []
+    true_positive = false_positive = 0
+    index = 0
+    while index < len(ordered):
+        value = ordered[index][0]
+        while index < len(ordered) and ordered[index][0] == value:
+            if ordered[index][1]:
+                true_positive += 1
+            else:
+                false_positive += 1
+            index += 1
+        counts.append((true_positive, false_positive))
+    return counts
+
+
+def average_precision(labels: list[int], scores: list[float]) -> float:
+    """Tie-aware step-wise AP: mean precision at each distinct score, weighted by new positives."""
+    positives = sum(labels)
+    if positives == 0 or positives == len(labels):
+        raise ValueError("average precision requires both classes")
+    area = 0.0
+    previous = 0
+    for true_positive, false_positive in _descending_counts(labels, scores):
+        area += (true_positive - previous) * true_positive / (true_positive + false_positive)
+        previous = true_positive
+    return area / positives
+
+
+def tpr_at_fpr(labels: list[int], scores: list[float], maximum_fpr: float = 0.01) -> float:
+    """Highest TPR at any score threshold whose FPR does not exceed ``maximum_fpr``."""
+    positives, negatives = sum(labels), len(labels) - sum(labels)
+    if not positives or not negatives:
+        raise ValueError("TPR requires both classes")
+    best = 0.0
+    for true_positive, false_positive in _descending_counts(labels, scores):
+        if false_positive / negatives <= maximum_fpr:
+            best = max(best, true_positive / positives)
+    return best
+
+
+def equal_error_rate(labels: list[int], scores: list[float]) -> float:
+    """Error rate where FPR equals FNR, linearly interpolated along the ROC curve."""
+    positives, negatives = sum(labels), len(labels) - sum(labels)
+    if not positives or not negatives:
+        raise ValueError("EER requires both classes")
+    previous_fpr, previous_gap = 0.0, -1.0  # threshold above every score: FPR 0, FNR 1
+    for true_positive, false_positive in _descending_counts(labels, scores):
+        fpr = false_positive / negatives
+        gap = fpr - (1 - true_positive / positives)
+        if gap >= 0:
+            # FPR and FNR are both linear along the segment, so they cross where gap is 0.
+            fraction = -previous_gap / (gap - previous_gap)
+            return previous_fpr + fraction * (fpr - previous_fpr)
+        previous_fpr, previous_gap = fpr, gap
+    raise AssertionError("ROC curve must end at FPR 1, FNR 0")
+
+
+def calibration(labels: list[int], scores: list[float], bins: int = 10) -> dict[str, float]:
+    """Brier score and equal-width-bin expected calibration error for probability scores."""
+    brier = sum((score - label) ** 2 for label, score in zip(labels, scores, strict=True)) / len(
+        labels
+    )
+    groups: dict[int, list[tuple[int, float]]] = defaultdict(list)
+    for label, score in zip(labels, scores, strict=True):
+        groups[min(int(score * bins), bins - 1)].append((label, score))
+    ece = 0.0
+    for group in groups.values():
+        ece += (
+            len(group)
+            / len(labels)
+            * abs(
+                sum(score for _, score in group) / len(group)
+                - sum(label for label, _ in group) / len(group)
+            )
+        )
+    return {"brier": brier, "ece_10": ece}
+
+
+def f1_score(labels: list[int], scores: list[float], threshold: float) -> float:
+    """F1 for the FAKE class with ``score >= threshold`` predicted FAKE."""
+    positives = sum(labels)
+    if not positives:
+        raise ValueError("F1 requires positive samples")
+    predicted = [score >= threshold for score in scores]
+    true_positive = sum(
+        flag and bool(label) for flag, label in zip(predicted, labels, strict=True)
+    )
+    return 2 * true_positive / (sum(predicted) + positives)
+
+
 def balanced_accuracy(labels: list[int], scores: list[float], threshold: float) -> float:
     positive = [score >= threshold for label, score in zip(labels, scores, strict=True) if label]
     negative = [score < threshold for label, score in zip(labels, scores, strict=True) if not label]
@@ -63,9 +160,18 @@ def aggregate_videos(rows: list[dict[str, object]]) -> list[dict[str, object]]:
 def metric_report(rows: list[dict[str, object]], threshold: float | None = None) -> dict:
     labels = [int(row["label"]) for row in rows]
     scores = [float(row["score"]) for row in rows]
-    result: dict = {"samples": len(rows), "auroc": auroc(labels, scores)}
+    result: dict = {
+        "samples": len(rows),
+        "auroc": auroc(labels, scores),
+        "average_precision": average_precision(labels, scores),
+        "equal_error_rate": equal_error_rate(labels, scores),
+        "tpr_at_1pct_fpr": tpr_at_fpr(labels, scores, 0.01),
+        "tpr_at_5pct_fpr": tpr_at_fpr(labels, scores, 0.05),
+        **calibration(labels, scores),
+    }
     if threshold is not None:
         result["balanced_accuracy"] = balanced_accuracy(labels, scores, threshold)
+        result["f1"] = f1_score(labels, scores, threshold)
         result["threshold"] = threshold
     by_domain: dict[str, list[dict[str, object]]] = defaultdict(list)
     by_method: dict[str, list[float]] = defaultdict(list)
