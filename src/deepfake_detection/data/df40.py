@@ -474,7 +474,11 @@ def _heldout_entities(domain: str, video_id: str) -> tuple[str, ...]:
 
 
 def partition_df40_heldout(
-    catalog_path: Path, reference_manifest: Path, output: Path
+    catalog_path: Path,
+    reference_manifest: Path,
+    output: Path,
+    *,
+    downloads_root: Path | None = None,
 ) -> dict[str, Any]:
     """Collect evaluation-archive videos whose sources never reach frozen train or validation.
 
@@ -508,7 +512,15 @@ def partition_df40_heldout(
         portable = _portable_row(row, "test", entities)
         # Real frames are listed once per method catalog; keep one copy.
         rows.setdefault(portable["relative_path"], portable)
-    ordered = sorted(rows.values(), key=lambda row: row["relative_path"])
+    empty: set[str] = set()
+    if downloads_root is not None:
+        from .materialize import find_empty_members
+
+        empty = find_empty_members(list(rows.values()), downloads_root)
+    ordered = sorted(
+        (row for path, row in rows.items() if path not in empty),
+        key=lambda row: row["relative_path"],
+    )
     output.parent.mkdir(parents=True, exist_ok=True)
     with output.open("w", newline="", encoding="utf-8") as stream:
         writer = csv.DictWriter(stream, fieldnames=COLUMNS, lineterminator="\n")
@@ -525,6 +537,7 @@ def partition_df40_heldout(
         "sha256": hashlib.sha256(output.read_bytes()).hexdigest(),
         "reference_entities": len(owned),
         "excluded_rows_by_domain": dict(sorted(excluded.items())),
+        "empty_archive_members": sorted(empty),
         "eligible_videos": {"/".join(key): value for key, value in sorted(videos.items())},
     }
 

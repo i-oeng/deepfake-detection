@@ -9,7 +9,7 @@ from zipfile import ZipFile
 
 import pytest
 
-from deepfake_detection.data.materialize import materialize_df40
+from deepfake_detection.data.materialize import find_empty_members, materialize_df40
 
 FIELDNAMES = [
     "image_id", "relative_path", "source_path", "split", "label", "fake_method",
@@ -126,3 +126,18 @@ def test_rejects_unsafe_destination_before_extraction(tmp_path: Path) -> None:
     subset_dir = _subset(tmp_path, [row])
     with pytest.raises(ValueError, match="unsafe destination path"):
         materialize_df40(subset_dir, tmp_path / "downloads", tmp_path / "data")
+
+
+def test_empty_archive_members_are_reported_and_never_extracted(tmp_path: Path) -> None:
+    rows = [
+        _row("empty", "DF40/starganv2/fake/779.jpg", label="FAKE", domain="celeba",
+             method="starganv2"),
+        _row("full", "DF40/starganv2/real/779.jpg", label="REAL", domain="celeba"),
+    ]
+    downloads = tmp_path / "downloads"
+    _archive(downloads, "test/starganv2.zip", "starganv2/fake/779.jpg", b"")
+    with ZipFile(downloads / "test/starganv2.zip", "a") as archive:
+        archive.writestr("starganv2/real/779.jpg", b"jpeg")
+    assert find_empty_members(rows, downloads) == {"images/empty.png"}
+    with pytest.raises(ValueError, match="empty ZIP member"):
+        materialize_df40(_subset(tmp_path, rows), downloads, tmp_path / "data", dry_run=True)
