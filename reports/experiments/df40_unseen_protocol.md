@@ -36,6 +36,8 @@ still requires face-identity metadata or a separately reviewed visual audit.
 
 The FF++ development and test slices are primary. Celeb-DF results are reported
 as cross-dataset measurements and never select a checkpoint or fusion weight.
+The architecture and checkpoint decision made before final-test export is in
+the [development-only selection record](df40_unseen_development_selection.md).
 
 ## Model selection and final export
 
