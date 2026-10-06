@@ -61,6 +61,20 @@ def test_unseen_gate_rejects_cross_split_source_identity() -> None:
     assert "1 cross-split parent groups" in result["failures"]
 
 
+def test_unseen_gate_rejects_cross_split_explicit_target_identity() -> None:
+    rows = _rows()
+    train_row = next(row for row in rows if row["split"] == "train")
+    test_row = next(row for row in rows if row["split"] == "test")
+    train_row["target_identity_id"] = "person-shared-target"
+    test_row["target_identity_id"] = "person-shared-target"
+
+    result = audit_unseen_rows(rows)
+
+    assert result["passed"] is False
+    assert "1 cross-split identity groups" in result["failures"]
+    assert result["overlap"]["identity"]["ff:person-shared-target"] == ["test", "train"]
+
+
 def test_source_entity_parser_keeps_both_swap_participants() -> None:
     assert _source_entities("ff", "ff:137_165") == ("ff:137", "ff:165")
     assert _source_entities("ff", "ff:652_video_method") == ("ff:652",)
