@@ -224,6 +224,8 @@ MRAA, and StyleGAN3, and reserves UniFace, MCNet, and RDDM for one final test
 export. The frozen manifest, split counts, audit limits, model-selection rules,
 and frequency export contract are recorded in the
 [DF40 unseen-method protocol](reports/experiments/df40_unseen_protocol.md).
+The completed RGB comparison and confidence intervals are in the
+[final RGB report](reports/experiments/df40_unseen_final_rgb.md).
 
 Build and verify the lineage-aware catalog with:
 
