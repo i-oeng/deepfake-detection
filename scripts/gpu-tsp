@@ -4,6 +4,7 @@
 set -euo pipefail
 project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 runtime="$project_root/runtime/gpu-queue"
+temp_root="$runtime/tmp"
 if [[ ! -d "$runtime" ]]; then
   echo "GPU queue runtime directory is missing: $runtime" >&2
   exit 2
@@ -13,5 +14,23 @@ if [[ ! -w "$runtime" ]]; then
   exit 2
 fi
 umask 0007
+mkdir -p "$temp_root"
 export TS_SOCKET="$runtime/task-spooler.sock"
-exec tsp "$@"
+# task-spooler creates output with mkstemp(3), which deliberately starts at
+# 0600 even under a collaborative umask. Keep those files in the project
+# runtime and widen them to the project group immediately after submission.
+export TMPDIR="$temp_root"
+export TS_ONFINISH="$project_root/scripts/share-task-output"
+
+case "${1:-}" in
+  ""|-K|-C|-l|-t|-c|-p|-o|-s|-r|-w|-k|-u|-i|-U|-h|-V|-S)
+    exec tsp "$@"
+    ;;
+esac
+
+job_id="$(tsp "$@")"
+printf '%s\n' "$job_id"
+if [[ "$job_id" =~ ^[0-9]+$ ]]; then
+  output_path="$(tsp -o "$job_id")"
+  "$project_root/scripts/share-task-output" "$output_path"
+fi

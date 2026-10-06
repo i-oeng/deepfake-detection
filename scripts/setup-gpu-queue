@@ -3,8 +3,13 @@
 set -euo pipefail
 project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 runtime="$project_root/runtime/gpu-queue"
-mkdir -p "$runtime"
-chgrp deepfake-editors "$runtime"
-chmod 2770 "$runtime"
+temp_root="$runtime/tmp"
+mkdir -p "$temp_root"
+chgrp deepfake-editors "$runtime" "$temp_root"
+chmod 2770 "$runtime" "$temp_root"
+# Preserve group access for ordinary outputs. The submission wrapper repairs
+# mkstemp-created task logs separately because mkstemp explicitly uses 0600.
+setfacl -m g:deepfake-editors:rwx,m::rwx "$runtime" "$temp_root"
+setfacl -d -m g:deepfake-editors:rwx,m::rwx "$runtime" "$temp_root"
 "$project_root/scripts/gpu-tsp" -S 1
-stat -c '%A %U %G %n' "$runtime" "$runtime/task-spooler.sock"
+stat -c '%A %U %G %n' "$runtime" "$temp_root" "$runtime/task-spooler.sock"
