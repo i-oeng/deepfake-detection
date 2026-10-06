@@ -62,6 +62,29 @@ class QualityAugment:
         return image
 
 
+def build_transform(model_name: str, training: bool) -> transforms.Compose:
+    """Crop-to-tensor preprocessing shared by training, evaluation, and inference."""
+    mean, std = NORMALIZE["clip_vit_b16" if model_name == "clip_vit_b16" else "imagenet"]
+    operations: list = []
+    if training:
+        operations.extend(
+            [
+                transforms.RandomResizedCrop(
+                    224, scale=(0.88, 1.0), interpolation=transforms.InterpolationMode.BICUBIC
+                ),
+                transforms.RandomHorizontalFlip(),
+                transforms.ColorJitter(brightness=0.12, contrast=0.12, saturation=0.10),
+                QualityAugment(),
+            ]
+        )
+    else:
+        operations.append(
+            transforms.Resize((224, 224), interpolation=transforms.InterpolationMode.BICUBIC)
+        )
+    operations.extend([transforms.ToTensor(), transforms.Normalize(mean, std)])
+    return transforms.Compose(operations)
+
+
 class Images(Dataset):
     def __init__(
         self,
@@ -73,25 +96,7 @@ class Images(Dataset):
         self.rows = rows
         # Evaluation-only degradation of the stored crop (robustness protocol P4).
         self.corruption = corruption
-        mean, std = NORMALIZE["clip_vit_b16" if model_name == "clip_vit_b16" else "imagenet"]
-        operations: list = []
-        if training:
-            operations.extend(
-                [
-                    transforms.RandomResizedCrop(
-                        224, scale=(0.88, 1.0), interpolation=transforms.InterpolationMode.BICUBIC
-                    ),
-                    transforms.RandomHorizontalFlip(),
-                    transforms.ColorJitter(brightness=0.12, contrast=0.12, saturation=0.10),
-                    QualityAugment(),
-                ]
-            )
-        else:
-            operations.append(
-                transforms.Resize((224, 224), interpolation=transforms.InterpolationMode.BICUBIC)
-            )
-        operations.extend([transforms.ToTensor(), transforms.Normalize(mean, std)])
-        self.transform = transforms.Compose(operations)
+        self.transform = build_transform(model_name, training)
 
     def __len__(self) -> int:
         return len(self.rows)
