@@ -254,7 +254,9 @@ scripts/submit-benchmark configs/training/df40_unseen_resnet18.yaml
 ```
 
 The wrapper fixes `TS_SOCKET` under `runtime/gpu-queue`, where the
-`deepfake-editors` setgid group gives xixi and aida access to one queue.
+`deepfake-editors` setgid group gives xixi and aida access to one queue. It
+also stores task logs under `runtime/gpu-queue/tmp` and changes task-spooler's
+owner-only `0600` output mode to group-readable and group-writable `0660`.
 Task-spooler serializes submitted jobs; it cannot account for GPU processes
 started outside that queue.
 

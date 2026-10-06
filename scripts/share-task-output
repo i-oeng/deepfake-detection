@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# Make a task-spooler log available to both members of deepfake-editors.
+set -euo pipefail
+
+project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+temp_root="$project_root/runtime/gpu-queue/tmp"
+
+# A submission watcher receives a job ID before task-spooler has created its
+# output file. Poll the queue until the job starts, then continue with the
+# normal path validation and permission repair below.
+if [[ "${1:-}" == "--job" ]]; then
+  job_id="${2:-}"
+  if [[ ! "$job_id" =~ ^[0-9]+$ ]]; then
+    echo "invalid task-spooler job ID: $job_id" >&2
+    exit 2
+  fi
+  output_path=""
+  for _ in $(seq 1 604800); do
+    candidate="$(tsp -o "$job_id" 2>/dev/null || true)"
+    if [[ -e "$candidate" ]]; then
+      output_path="$candidate"
+      break
+    fi
+    if ! tsp -i "$job_id" >/dev/null 2>&1; then
+      exit 0
+    fi
+    sleep 1
+  done
+  if [[ -z "$output_path" ]]; then
+    exit 0
+  fi
+else
+  # Direct calls pass PATH as argument one. TS_ONFINISH passes job ID, exit
+  # status, PATH, and command, so its output path is argument three.
+  output_path="${3:-${1:-}}"
+fi
+if [[ -z "$output_path" || ! -e "$output_path" ]]; then
+  exit 0
+fi
+
+resolved_temp="$(realpath -e "$temp_root")"
+resolved_output="$(realpath -e "$output_path")"
+case "$resolved_output" in
+  "$resolved_temp"/*) ;;
+  *)
+    echo "refusing to change permissions outside $resolved_temp: $resolved_output" >&2
+    exit 2
+    ;;
+esac
+
+chgrp deepfake-editors "$resolved_output"
+chmod 0660 "$resolved_output"

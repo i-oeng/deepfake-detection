@@ -32,6 +32,7 @@ def audit_unseen_rows(rows: list[dict[str, str]]) -> dict:
         "source_domain",
         "lineage_video_ids",
         "identity_id",
+        "target_identity_id",
         "pixel_sha256",
         "dhash64",
         "status",
@@ -60,9 +61,17 @@ def audit_unseen_rows(rows: list[dict[str, str]]) -> dict:
             missing_parent += 1
         for parent in parents:
             links["parent"][parent].add(split)
-        identities = {row["identity_id"]} if row["identity_id"] else set()
+        # Both roles are identity evidence. Keeping only source identity here
+        # would allow an explicit target person to occur in multiple splits
+        # whenever its name does not match Celeb-DF's idNN convention.
+        identities = {
+            identity.strip()
+            for column in ("identity_id", "target_identity_id")
+            for identity in row[column].split("|")
+            if identity.strip()
+        }
         identities.update(candidate_ids(row["video_id"]))
-        identities.update(candidate_ids(row.get("target_identity_id", "")))
+        identities.update(candidate_ids(row["target_identity_id"]))
         # FF++ does not publish person IDs in these catalogs. Each source clip
         # is the auditable identity unit; CDF keeps explicit idNN tokens.
         if not identities and domain == "ff":
