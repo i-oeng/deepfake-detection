@@ -38,6 +38,21 @@ def load_config(path: Path) -> tuple[dict, Path]:
 def load_manifest_rows(config: dict, root: Path) -> tuple[list[dict[str, str]], Path, Path]:
     manifest_dir = (root / str(config["manifest_dir"])).resolve()
     data_root = (root / str(config["data_root"])).resolve()
+    rows, manifest_path = read_manifest_rows(manifest_dir, data_root)
+    if manifest_dir.name != str(config["manifest_id"]):
+        raise ValueError("configured manifest ID differs from its directory")
+    if sha256_file(manifest_path) != str(config["manifest_sha256"]):
+        raise ValueError("configured manifest SHA-256 differs from the artifact")
+    counts = Counter(row["split"] for row in rows)
+    if set(counts) != set(SPLITS):
+        raise ValueError(f"expected train/validation/test splits: {counts}")
+    return rows, manifest_path, data_root
+
+
+def read_manifest_rows(manifest_dir: Path, data_root: Path) -> tuple[list[dict[str, str]], Path]:
+    """Verify an immutable manifest and resolve every image safely under ``data_root``."""
+    manifest_dir = manifest_dir.resolve()
+    data_root = data_root.resolve()
     valid, errors = verify_manifest(manifest_dir)
     if not valid:
         raise ValueError(f"invalid immutable manifest: {errors}")
@@ -47,10 +62,6 @@ def load_manifest_rows(config: dict, root: Path) -> tuple[list[dict[str, str]], 
         if not REQUIRED.issubset(reader.fieldnames or ()):
             raise ValueError("manifest lacks required training columns")
         rows = list(reader)
-    if manifest_dir.name != str(config["manifest_id"]):
-        raise ValueError("configured manifest ID differs from its directory")
-    if sha256_file(manifest_path) != str(config["manifest_sha256"]):
-        raise ValueError("configured manifest SHA-256 differs from the artifact")
     if not rows:
         raise ValueError("empty training manifest")
     for row in rows:
@@ -63,10 +74,7 @@ def load_manifest_rows(config: dict, root: Path) -> tuple[list[dict[str, str]], 
         if not image.is_relative_to(data_root) or not image.is_file():
             raise ValueError(f"manifest image is missing or escapes data root: {relative}")
         row["_path"] = str(image)
-    counts = Counter(row["split"] for row in rows)
-    if set(counts) != set(SPLITS):
-        raise ValueError(f"expected train/validation/test splits: {counts}")
-    return rows, manifest_path, data_root
+    return rows, manifest_path
 
 
 def split_rows(rows: list[dict[str, str]]) -> dict[str, list[dict[str, str]]]:

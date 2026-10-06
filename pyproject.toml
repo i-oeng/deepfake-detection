@@ -36,6 +36,7 @@ deepfake-train-rgb = "deepfake_detection.train.rgb:main"
 deepfake-train-benchmark = "deepfake_detection.train.benchmark:main"
 deepfake-fuse = "deepfake_detection.train.fusion:main"
 deepfake-summarize-seeds = "deepfake_detection.train.summarize:main"
+deepfake-evaluate = "deepfake_detection.train.extended:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
