@@ -36,7 +36,8 @@ def _prediction_path(output_root: Path, run: Path, manifest: Path, split: str,
 
 
 def score(run_dir: Path, manifest_dir: Path, data_root: Path, output_root: Path, *,
-          split: str = "test", corruption: tuple[str, float] | None = None) -> Path:
+          split: str = "test", corruption: tuple[str, float] | None = None,
+          workers: int | None = None) -> Path:
     """Predict one manifest split with a frozen checkpoint; skip work that already exists."""
     import torch
 
@@ -46,6 +47,9 @@ def score(run_dir: Path, manifest_dir: Path, data_root: Path, output_root: Path,
     if path.exists():
         return path
     config = json.loads((run_dir / "config.json").read_text(encoding="utf-8"))
+    if workers is not None:
+        # Loader parallelism only; predictions and seeded corruptions are unchanged.
+        config["workers"] = workers
     training = json.loads((run_dir / "report.json").read_text(encoding="utf-8"))
     checkpoint = run_dir / "best.pt"
     if sha256_file(checkpoint) != training["checkpoint_sha256"]:
@@ -88,7 +92,8 @@ def _runs(config: dict, root: Path) -> list[dict]:
     return runs
 
 
-def score_all(config: dict, root: Path, *, robustness: bool = True) -> list[str]:
+def score_all(config: dict, root: Path, *, robustness: bool = True,
+              workers: int | None = None) -> list[str]:
     """Score every configured run on P1-P3 and, optionally, the P4 corruptions."""
     output_root = root / config["output_root"]
     data_root = root / config["data_root"]
@@ -105,7 +110,8 @@ def score_all(config: dict, root: Path, *, robustness: bool = True) -> list[str]
             # P3 (CelebA) is clean-only, but it shares the held-out manifest with
             # P1-P2, so corrupted held-out scores include it and reports skip it.
             for manifest in manifests.values():
-                score(run["path"], manifest, data_root, output_root, corruption=corruption)
+                score(run["path"], manifest, data_root, output_root, corruption=corruption,
+                      workers=workers)
     return missing
 
 
@@ -219,6 +225,7 @@ def main(argv: list[str] | None = None) -> int:
     every.add_argument("--config", type=Path, required=True)
     every.add_argument("--run-name", action="append", help="Limit to these configured runs")
     every.add_argument("--clean-only", action="store_true")
+    every.add_argument("--workers", type=int, default=12)
     summary = commands.add_parser("report", help="Write the extended evaluation JSON report")
     summary.add_argument("--config", type=Path, required=True)
     summary.add_argument("--output", type=Path, required=True)
@@ -236,7 +243,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "score-all":
         if args.run_name:
             config["runs"] = [run for run in config["runs"] if run["name"] in args.run_name]
-        missing = score_all(config, root, robustness=not args.clean_only)
+        missing = score_all(config, root, robustness=not args.clean_only,
+                            workers=args.workers)
         print(json.dumps({"missing_runs": missing}))
         return 0
     result = build_report(config, root)
