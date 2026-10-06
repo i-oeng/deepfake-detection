@@ -32,11 +32,14 @@ from .common import load_manifest_rows as _load_rows
 from .common import sampling_weights as _sampling_weights
 from .common import sha256_file as _sha256
 from .evaluation import report as frozen_report
+from .frequency import FrequencyResNet
+from .frequency import preprocessing_id as frequency_preprocessing_id
 from .loop import _seed_worker
 from .metrics import aggregate_videos, metric_report
 
 PREPROCESS_ID = "df40-rgb-224-compression-quality-v1"
 SAMPLE_PREPROCESS_ID = "df40-face-frame-manifest-v1"
+FREQUENCY_MODELS = {"frequency_resnet18"}
 NORMALIZE = {
     "clip_vit_b16": ((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711)),
     "imagenet": ((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
@@ -121,8 +124,15 @@ class BinaryEncoder(nn.Module):
                 config=vision_config,
             )
             width = encoder.config.hidden_size
+        elif name == "frequency_resnet18":
+            encoder = FrequencyResNet(
+                config.get("frequency_inputs") or (),
+                feature_fft=bool(config.get("feature_fft", False)),
+                pretrained=bool(config.get("pretrained", True)),
+            )
+            width = encoder.width
         else:
-            raise ValueError(f"unsupported RGB model: {name}")
+            raise ValueError(f"unsupported model: {name}")
         self.encoder = encoder
         self.head = nn.Linear(width, 1)
 
@@ -145,6 +155,12 @@ def set_trainable(model: BinaryEncoder, epoch: int) -> None:
     elif model.name == "resnet18" and epoch > 1:
         for parameter in model.encoder.layer4.parameters():
             parameter.requires_grad = True
+    elif model.name == "frequency_resnet18":
+        # The spectral stem replaces ImageNet RGB input, so it trains from epoch one; the
+        # backbone follows after one warm-up epoch, as frequency inputs differ from ImageNet.
+        trainable = model.encoder.parameters() if epoch > 1 else model.encoder.stem_parameters()
+        for parameter in trainable:
+            parameter.requires_grad = True
     elif model.name == "clip_vit_b16":
         # Normalization layers adapt image features while the large attention
         # and MLP weights remain pinned to the pretrained checkpoint.
@@ -152,6 +168,12 @@ def set_trainable(model: BinaryEncoder, epoch: int) -> None:
             if isinstance(module, nn.LayerNorm):
                 for parameter in module.parameters():
                     parameter.requires_grad = True
+
+
+def preprocessing_id(config: dict) -> str:
+    if config["model"] in FREQUENCY_MODELS:
+        return frequency_preprocessing_id(config.get("frequency_inputs") or ())
+    return PREPROCESS_ID
 
 
 def _loader(
@@ -350,7 +372,7 @@ def run(config_path: Path, *, seed: int | None = None, evaluate_test: bool = Fal
         "manifest_id": config["manifest_id"],
         "manifest_sha256": config["manifest_sha256"],
         "sample_preprocessing_id": SAMPLE_PREPROCESS_ID,
-        "preprocessing_id": PREPROCESS_ID,
+        "preprocessing_id": preprocessing_id(config),
         "checkpoint_file": "best.pt",
         "checkpoint_sha256": checkpoint_hash,
         "model": config["model"],
