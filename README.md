@@ -172,6 +172,29 @@ removed groups, and per-split counts. The final audit still checks all images
 and split boundaries; this filtering does not establish identity disjointness
 because the official metadata lacks identity IDs.
 
+### Exploratory RGB baseline
+
+The authors' processed images are already RGB face crops (256 or 512 pixels).
+The baseline applies a recorded 224-pixel resize and ImageNet normalization,
+then trains a pretrained ResNet18 classifier on the clean manifest. It freezes
+the encoder for one epoch and fine-tunes its last block for two more. Weighted
+sampling balances real/fake classes, fake methods, and video groups. Validation
+video AUROC selects the checkpoint; a threshold chosen from validation videos
+is applied to the test set after selection. Test methods are unseen in training.
+
+```bash
+python -m pip install -e '.[train]'
+deepfake-train-rgb --config configs/training/df40_rgb_resnet18_pilot.yaml --check-only
+deepfake-train-rgb --config configs/training/df40_rgb_resnet18_pilot.yaml
+```
+
+The run writes its resolved config, best checkpoint, SHA-256 checksum, epoch
+history, and frame/video metrics to `artifacts/rgb/<run-id>/`. It reads only
+manifest-listed images. These first results are exploratory because the DF40
+catalog has no identity IDs, so identity overlap has not been ruled out.
+The first completed run is summarized in
+[the RGB pilot report](reports/experiments/df40_rgb_resnet18_pilot.md).
+
 ## Notebook
 
 Open `notebooks/01_dataset_audit.ipynb` for a compact visual review. The

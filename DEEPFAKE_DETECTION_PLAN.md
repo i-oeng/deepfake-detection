@@ -10,7 +10,8 @@ The planned detector has three experiment tracks:
 2. A frequency model that learns spectral and high-frequency evidence.
 3. A fused model that combines both signals.
 
-The repository currently implements the data-quality foundation. It does not yet contain model, training, evaluation, checkpoint, or inference code.
+The repository implements the data-quality foundation and an exploratory RGB
+training baseline. Frequency modeling, fusion, and inference remain planned.
 
 ## 2. Current state
 

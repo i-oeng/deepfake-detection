@@ -1,0 +1,21 @@
+experiment:
+  manifest_dir: data/manifests/df40_pilot_clean/bbead51c5da8f9363a1c
+  manifest_id: bbead51c5da8f9363a1c
+  manifest_sha256: bbead51c5da8f9363a1c07562c14ceb8e5cf127bf3ffc7ac43391bddf1fc6c6b
+  data_root: data/raw/df40
+  output_root: artifacts/rgb
+  seed: 20261006
+  require_cuda: true
+
+  # Official DF40 processed face crops are resized to 224 RGB pixels.
+  model: resnet18
+  weights: IMAGENET1K_V1
+  weights_sha256: f37072fd47e89c5e827621c5baffa7500819f7896bbacec160b1a16c560e07ec
+  batch_size: 64
+  workers: 4
+  head_epochs: 1
+  finetune_epochs: 2
+  lr_head: 0.001
+  lr_finetune: 0.0001
+  weight_decay: 0.0001
+  patience: 2
