@@ -70,3 +70,36 @@ def test_rejects_unrecognized_catalog_instead_of_guessing_domain(tmp_path: Path)
     _write(source / "DF40_all.json", {})
     with pytest.raises(ValueError, match="unsupported DF40 catalog filename"):
         normalize_df40(source, tmp_path / "metadata.csv")
+
+
+def test_pilot_split_deduplicates_official_eval_overlap_by_video(tmp_path: Path) -> None:
+    source = tmp_path / "json"
+    real = "/old/ff/real/001/000.png"
+    for method in ("simswap", "wav2lip"):
+        fake = f"/old/ff/{method}/001/000.png"
+        _write(source / f"{method}_ff.json", {f"{method}_ff": {
+            f"{method}_Real": {
+                split: {"001": {"label": f"{method}_Real", "frames": [real]}}
+                for split in ("val", "test")
+            },
+            f"{method}_Fake": {
+                split: {"001": {"label": f"{method}_Fake", "frames": [fake]}}
+                for split in ("val", "test")
+            },
+        }})
+
+    output = tmp_path / "metadata.csv"
+    with pytest.raises(ValueError, match="conflicting official frame assignment"):
+        normalize_df40(source, output)
+
+    summary = normalize_df40(source, output, eval_split_seed="pilot-seed")
+    first_bytes = output.read_bytes()
+    catalog = pd.read_csv(output, dtype=str, keep_default_na=False)
+
+    assert summary["rows"] == 3
+    assert summary["overlapping_eval_paths"] == 3
+    assert set(catalog["official_splits"]) == {"test|validation"}
+    assert catalog.groupby("video_id")["split"].nunique().to_dict() == {"ff:001": 1}
+    assert catalog["image_id"].is_unique
+    normalize_df40(source, output, eval_split_seed="pilot-seed")
+    assert output.read_bytes() == first_bytes

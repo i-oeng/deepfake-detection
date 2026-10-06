@@ -84,7 +84,9 @@ def _verify_subset(args: argparse.Namespace) -> int:
 
 
 def _normalize_df40(args: argparse.Namespace) -> int:
-    result = normalize_df40(args.input_dir, args.output)
+    result = normalize_df40(
+        args.input_dir, args.output, eval_split_seed=args.eval_split_seed
+    )
     print(json.dumps(result, indent=2))
     return 0
 
@@ -139,6 +141,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     normalize.add_argument("--input-dir", type=Path, required=True)
     normalize.add_argument("--output", type=Path, required=True)
+    normalize.add_argument(
+        "--eval-split-seed",
+        help="Explicitly repartition overlapping official val/test videos for a pilot",
+    )
     normalize.set_defaults(handler=_normalize_df40)
     return parser
 

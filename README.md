@@ -88,16 +88,20 @@ variants of SimSwap, Wav2Lip, StyleGAN2, SD-2.1, BlendFace, SadTalker, and DiT,
 plus `starganv2.json`. Do not include aggregate files such as `DF40_all.json`.
 
 ```powershell
-deepfake-data normalize-df40 --input-dir data/raw/df40/official_json --output data/raw/df40/metadata.csv
+deepfake-data normalize-df40 --input-dir data/raw/df40/official_json --output data/raw/df40/metadata.csv --eval-split-seed 20260925
 ```
 
 The adapter retains each official frame path in `source_path` and assigns a
 portable `relative_path` under `images/`. This is a destination for downloaded
 or extracted frames; normalization does not copy image bytes. It deduplicates
 real frames repeated in several method JSONs and rejects any frame assigned to
-conflicting splits or labels. The official JSONs do not consistently identify
-people, so absent `identity_id` values stay empty. A passing manifest still
-requires a separate identity audit before reportable training.
+conflicting labels or train/evaluation pools. The published evaluation frames
+appear under both `val` and `test`; the explicit seed assigns whole videos to
+one pilot split across methods. `official_splits` preserves those source labels.
+Omitting `--eval-split-seed` keeps strict conflict detection. The official JSONs
+do not consistently identify people, so absent `identity_id` values stay empty.
+A passing manifest still requires a separate identity audit before reportable
+training.
 
 ### Select a DF40 pilot before downloading images
 
@@ -124,11 +128,10 @@ result is stored at
 `data/subsets/df40/df40_pilot_v1/<subset-id>/subset.csv` with checksums and a
 summary in `subset.json`.
 
-The supplied pilot targets up to 2,500 images per training method, 500 per
-validation method, and 1,000 per unseen test method. Quota shortfalls are
-recorded rather than hidden. Set `strict_quotas: true` before freezing final
-report experiments. With complete quotas and 1:1 real/fake balancing, the
-selection contains at most 32,000 images.
+The supplied pilot selects 1,500 images per training method, 200 per validation
+method, and 300 per unseen test method. With 1:1 real/fake balancing, this is
+16,000 images. Strict quotas reject shortfalls; the pilot remains exploratory
+until source identity and image payload audits pass.
 
 ## Notebook
 
