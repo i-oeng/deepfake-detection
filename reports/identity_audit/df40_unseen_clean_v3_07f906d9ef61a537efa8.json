@@ -1,0 +1,35 @@
+{
+  "counts": {
+    "test/mcnet": 168,
+    "test/rddm": 168,
+    "test/real": 504,
+    "test/uniface": 168,
+    "train/blendface": 600,
+    "train/dit": 592,
+    "train/fomm": 600,
+    "train/real": 4800,
+    "train/sadtalker": 600,
+    "train/sd21": 592,
+    "train/simswap": 600,
+    "train/stylegan2": 592,
+    "train/wav2lip": 600,
+    "validation/facedancer": 176,
+    "validation/mraa": 176,
+    "validation/real": 528,
+    "validation/stylegan3": 176
+  },
+  "failures": [],
+  "identity_note": "Name tokens and metadata are candidate identities; visual verification is required.",
+  "manifest_id": "07f906d9ef61a537efa8",
+  "manifest_sha256": "07f906d9ef61a537efa81be8da1ba1a568bb8fc339380a2987ad8ac717e73dff",
+  "missing_identity_rows": 0,
+  "missing_parent_rows": 0,
+  "overlap": {
+    "dhash": {},
+    "identity": {},
+    "parent": {},
+    "pixel": {},
+    "video": {}
+  },
+  "passed": true
+}

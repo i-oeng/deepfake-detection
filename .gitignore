@@ -28,6 +28,7 @@ data/manifests/**
 data/subsets/**
 reports/data_audit/**
 artifacts/**
+runtime/**
 checkpoints/**
 models/**/*.pt
 models/**/*.pth

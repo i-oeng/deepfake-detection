@@ -35,3 +35,9 @@ domain-shifted test split. The DF40 metadata has no identity IDs, so identity
 overlap remains unverified. These numbers should not be presented as a
 reportable identity-disjoint benchmark. The next experiment should include an
 independent identity audit and compare methods within each source domain.
+
+A subsequent [name-derived identity audit](../identity_audit/df40_pilot_clean_bbead51c5da8f9363a1c.json)
+found 40 Celeb-DF `idNN` tokens shared by validation and test, touching 1,813
+images. This is a candidate identity warning: manipulated names may contain
+both source and target tokens, while 690 Celeb-DF images have no token. It does
+not establish visual identity matches or cover FF++.

@@ -32,6 +32,7 @@ class SplitRule:
     max_images_per_method: int
     max_groups_per_method: int
     max_frames_per_group: int
+    max_images_per_method_by_domain: tuple[tuple[str, int], ...] = ()
 
     def __post_init__(self) -> None:
         if not self.fake_methods:
@@ -42,6 +43,9 @@ class SplitRule:
             raise ValueError("max_groups_per_method must be at least 1")
         if self.max_frames_per_group < 1:
             raise ValueError("max_frames_per_group must be at least 1")
+        if any(not domain or maximum < 1
+               for domain, maximum in self.max_images_per_method_by_domain):
+            raise ValueError("domain image quotas require a domain and positive count")
 
 
 @dataclass(frozen=True)
@@ -65,6 +69,7 @@ class SubsetSpec:
     real_label: str
     real_to_fake_ratio: float
     require_disjoint_train_test_methods: bool
+    require_disjoint_all_methods: bool
     strict_quotas: bool
     split_rules: tuple[tuple[str, SplitRule], ...]
     config_path: Path | None = None
@@ -117,6 +122,7 @@ class SubsetSpec:
             "real_label": self.real_label,
             "real_to_fake_ratio": self.real_to_fake_ratio,
             "require_disjoint_train_test_methods": self.require_disjoint_train_test_methods,
+            "require_disjoint_all_methods": self.require_disjoint_all_methods,
             "strict_quotas": self.strict_quotas,
             "split_rules": {
                 split: asdict(rule) for split, rule in self.split_rules
@@ -179,6 +185,12 @@ def load_subset_spec(
                     max_images_per_method=int(rule_raw["max_images_per_method"]),
                     max_groups_per_method=int(rule_raw["max_groups_per_method"]),
                     max_frames_per_group=int(rule_raw["max_frames_per_group"]),
+                    max_images_per_method_by_domain=tuple(
+                        (str(domain), int(maximum))
+                        for domain, maximum in sorted(
+                            dict(rule_raw.get("max_images_per_method_by_domain", {})).items()
+                        )
+                    ),
                 ),
             )
         )
@@ -206,6 +218,7 @@ def load_subset_spec(
         require_disjoint_train_test_methods=bool(
             subset.get("require_disjoint_train_test_methods", True)
         ),
+        require_disjoint_all_methods=bool(subset.get("require_disjoint_all_methods", False)),
         strict_quotas=bool(subset.get("strict_quotas", True)),
         split_rules=tuple(rules),
         config_path=resolved_config,
@@ -310,6 +323,17 @@ def _prepare_catalog(frame: pd.DataFrame, spec: SubsetSpec) -> pd.DataFrame:
 
 def _validate_method_protocol(catalog: pd.DataFrame, spec: SubsetSpec) -> None:
     rules = spec.splits
+
+    if spec.require_disjoint_all_methods:
+        owner: dict[str, str] = {}
+        for split, rule in rules.items():
+            for value in rule.fake_methods:
+                method = _method_key(value)
+                if method in owner:
+                    raise ValueError(
+                        f"fake method {method!r} occurs in both {owner[method]!r} and {split!r}"
+                    )
+                owner[method] = split
     if spec.require_disjoint_train_test_methods and "train" in rules and "test" in rules:
         train = {_method_key(value) for value in rules["train"].fake_methods}
         test = {_method_key(value) for value in rules["test"].fake_methods}
@@ -353,13 +377,17 @@ def _sample_fake_method(
     split: str,
     method: str,
     rule: SplitRule,
+    *,
+    image_limit: int | None = None,
+    quota_name: str | None = None,
 ) -> tuple[pd.DataFrame, str | None]:
     groups = sorted(
         candidates["_selection_group"].unique().tolist(),
         key=lambda group: (_stable_rank(spec.seed, split, method, str(group)), str(group)),
     )
     parts = []
-    remaining = rule.max_images_per_method
+    maximum = image_limit if image_limit is not None else rule.max_images_per_method
+    remaining = maximum
     for group in groups[: rule.max_groups_per_method]:
         if remaining <= 0:
             break
@@ -373,10 +401,10 @@ def _sample_fake_method(
         remaining -= len(sampled)
     shortage = None
     if remaining:
-        selected_count = rule.max_images_per_method - remaining
+        selected_count = maximum - remaining
         shortage = (
-            f"{split}/{method}: selected {selected_count} of "
-            f"{rule.max_images_per_method} requested images"
+            f"{split}/{quota_name or method}: selected {selected_count} of "
+            f"{maximum} requested images"
         )
     selected = pd.concat(parts, ignore_index=False) if parts else candidates.iloc[0:0].copy()
     return selected, shortage
@@ -497,16 +525,24 @@ def build_subset(spec: SubsetSpec) -> SubsetArtifact:
                     == _method_key(configured_method)
                 )
             ]
-            sampled, shortage = _sample_fake_method(
-                method_rows,
-                spec,
-                split,
-                configured_method,
-                rule,
-            )
-            if shortage:
-                shortfalls.append(shortage)
-            fake_parts.append(sampled)
+            domain_quotas = rule.max_images_per_method_by_domain
+            if domain_quotas:
+                for domain, maximum in domain_quotas:
+                    sampled, shortage = _sample_fake_method(
+                        method_rows.loc[method_rows[spec.domain_column] == domain],
+                        spec, split, configured_method, rule,
+                        image_limit=maximum, quota_name=f"{configured_method}/{domain}",
+                    )
+                    if shortage:
+                        shortfalls.append(shortage)
+                    fake_parts.append(sampled)
+            else:
+                sampled, shortage = _sample_fake_method(
+                    method_rows, spec, split, configured_method, rule
+                )
+                if shortage:
+                    shortfalls.append(shortage)
+                fake_parts.append(sampled)
         selected_fake = pd.concat(fake_parts, ignore_index=False)
         selected_parts.append(selected_fake)
 

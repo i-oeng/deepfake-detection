@@ -1,0 +1,44 @@
+subset:
+  name: df40_unseen_v1
+  source_dataset: df40
+  source_metadata: data/raw/df40/metadata_unseen_partitioned_v3.csv
+  output_root: data/subsets
+  seed: "20261006"
+  id_column: image_id
+  path_column: relative_path
+  label_column: label
+  split_column: split
+  method_column: fake_method
+  family_column: manipulation_family
+  domain_column: source_domain
+  frame_order_column: frame_index
+  group_columns: [video_id, identity_id, image_id]
+  fake_label: FAKE
+  real_label: REAL
+  real_to_fake_ratio: 1.0
+  require_disjoint_train_test_methods: true
+  require_disjoint_all_methods: true
+  strict_quotas: true
+  # The protocol uses the normalizer's source-video split. Each selected video
+  # contributes at most eight frames; quotas fail closed when an archive is short.
+  splits:
+    train:
+      fake_methods: [simswap, blendface, wav2lip, fomm, sadtalker, stylegan2, sd21, dit]
+      max_images_per_method: 600
+      max_images_per_method_by_domain: {ff: 600}
+      max_groups_per_method: 1000
+      max_frames_per_group: 8
+    validation:
+      fake_methods: [facedancer, mraa, stylegan3]
+      max_images_per_method: 120
+      # FF++ is the primary unseen-method result. CDF stays smaller because the
+      # identity-disjoint validation pool contains fewer independent real videos.
+      max_images_per_method_by_domain: {ff: 120, cdf: 56}
+      max_groups_per_method: 200
+      max_frames_per_group: 8
+    test:
+      fake_methods: [uniface, mcnet, rddm]
+      max_images_per_method: 120
+      max_images_per_method_by_domain: {ff: 120, cdf: 48}
+      max_groups_per_method: 300
+      max_frames_per_group: 8

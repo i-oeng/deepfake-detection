@@ -18,11 +18,18 @@ SOURCE_PREFIX = "deepfakes_detection_datasets/"
 FAKE_ARCHIVES = {
     "blendface": "blendface.zip",
     "dit": "DiT.zip",
+    "facedancer": "facedancer.zip",
+    "fomm": "fomm.zip",
+    "mcnet": "mcnet.zip",
+    "mraa": "MRAA.zip",
+    "rddm": "RDDM.zip",
     "sadtalker": "sadtalker.zip",
     "sd21": "sd2.1.zip",
     "simswap": "simswap.zip",
     "starganv2": "starganv2.zip",
     "stylegan2": "StyleGAN2.zip",
+    "stylegan3": "StyleGAN3.zip",
+    "uniface": "uniface.zip",
     "wav2lip": "wav2lip.zip",
 }
 REAL_ARCHIVES = {

@@ -1,0 +1,40 @@
+# Frozen, source-disjoint selection from explicit-identity catalog 03035cf606a5da3a.
+dataset:
+  name: df40_unseen_v1
+  version: "1f1729f63663432325ca"
+  data_root: data/raw/df40
+  metadata_path: ../../subsets/df40/df40_unseen_v1/1f1729f63663432325ca/subset.csv
+  output_root: data/manifests
+  report_root: reports/data_audit
+  id_column: image_id
+  label_column: label
+  split_column: split
+  path_column: relative_path
+  metadata_columns:
+    - source_domain
+    - manipulation_family
+    - fake_method
+    - video_id
+    - identity_id
+    - compression
+    - source_video_id
+    - target_identity_id
+    - lineage_video_ids
+    - frame_index
+  group_columns: [video_id, identity_id]
+  leakage_check_columns: [source_domain, manipulation_family, fake_method, compression]
+  expected_labels: [REAL, FAKE]
+  expected_splits: [train, validation, test]
+  workers: 8
+  quality_gates:
+    max_missing_images: 0
+    max_decode_errors: 0
+    max_ambiguous_paths: 0
+    max_cross_split_exact_groups: 0
+    max_cross_split_pixel_groups: 0
+    max_cross_split_perceptual_groups: 0
+    max_group_overlap_values: 0
+    fail_on_unexpected_labels: true
+    fail_on_unexpected_splits: true
+    fail_on_suspicious_leakage: false
+    leakage_purity_threshold: 0.98

@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Both researchers use this exact socket. The shared setgid directory and
+# group umask let either account reconnect after task-spooler restarts.
+set -euo pipefail
+project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+runtime="$project_root/runtime/gpu-queue"
+if [[ ! -d "$runtime" ]]; then
+  echo "GPU queue runtime directory is missing: $runtime" >&2
+  exit 2
+fi
+if [[ ! -w "$runtime" ]]; then
+  echo "GPU queue runtime directory is not group-writable: $runtime" >&2
+  exit 2
+fi
+umask 0007
+export TS_SOCKET="$runtime/task-spooler.sock"
+exec tsp "$@"
