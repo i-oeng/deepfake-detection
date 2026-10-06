@@ -25,13 +25,13 @@ The repository already provides:
 - checksum verification;
 - CLI commands, tests, and CI checks.
 
-The configured DF40 pilot selects at most 32,000 images:
+The configured DF40 pilot selects 16,000 images when its strict quotas pass:
 
 | Split | Fake methods | Fake images | Real images | Total |
 |---|---:|---:|---:|---:|
-| Train | 4 seen methods | 10,000 | 10,000 | 20,000 |
-| Validation | Same 4 seen methods | 2,000 | 2,000 | 4,000 |
-| Test | 4 unseen methods | 4,000 | 4,000 | 8,000 |
+| Train | 4 seen methods | 6,000 | 6,000 | 12,000 |
+| Validation | Same 4 seen methods | 800 | 800 | 1,600 |
+| Test | 4 unseen methods | 1,200 | 1,200 | 2,400 |
 
 The sampler keeps up to ten frames per video or selection group and balances real images against selected fake images by source domain.
 
