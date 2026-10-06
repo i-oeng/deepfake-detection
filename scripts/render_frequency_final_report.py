@@ -178,10 +178,13 @@ def main() -> int:
     lines.extend(
         [
             "",
-            "† The gated head is descriptive. Its development checkpoint file was not retained; "
-            f"the final run recreated the fixed-seed head and did not reproduce the stored byte "
-            f"hash in {len(gate_mismatches)}/6 pairs. Gated results are excluded from both "
-            "verdicts.",
+            "† The gated head is descriptive. The six development gated checkpoints are kept "
+            "outside the repository (`gated-*.pt` is git-ignored) on the training host and match "
+            "the hashes in the development reports. The final fusion run did not load them: it "
+            "retrained the head with the same seed, and the retrained head did not reproduce the "
+            f"development byte hash in {len(gate_mismatches)}/6 pairs. The gated test numbers "
+            "therefore come from retrained heads, not the development-selected ones, and are "
+            "excluded from both verdicts.",
             "",
             "## Macro video metrics across three frequency seeds",
             "",

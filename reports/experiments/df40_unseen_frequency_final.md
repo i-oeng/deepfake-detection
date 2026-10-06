@@ -22,7 +22,7 @@ The untouched final test was read only after development fusion weights, checkpo
 | clip_vit_b16-20261006-freq-20261007 | 0.80 | `a3bcb4fb29af0d4d7e18c56f69b28fd48826bfbad3ce51d94f3b1e20c1d9cdf1` | `1f515fd48dffba3fb51fae0b391e7f4df0513b0776b09db256207e6e9c019662` |
 | clip_vit_b16-20261006-freq-20261008 | 0.85 | `a3bcb4fb29af0d4d7e18c56f69b28fd48826bfbad3ce51d94f3b1e20c1d9cdf1` | `e2ffd178f072964e05405585af6fa4a6b7f07620e93dc11aabee1a06e80d6680` |
 
-† The gated head is descriptive. Its development checkpoint file was not retained; the final run recreated the fixed-seed head and did not reproduce the stored byte hash in 6/6 pairs. Gated results are excluded from both verdicts.
+† The gated head is descriptive. The six development gated checkpoints are kept outside the repository (`gated-*.pt` is git-ignored) on the training host and match the hashes in the development reports. The final fusion run did not load them: it retrained the head with the same seed, and the retrained head did not reproduce the development byte hash in 6/6 pairs. The gated test numbers therefore come from retrained heads, not the development-selected ones, and are excluded from both verdicts.
 
 ## Macro video metrics across three frequency seeds
 
