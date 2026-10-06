@@ -100,13 +100,21 @@ class BinaryEncoder(nn.Module):
             width = encoder.classifier[-1].in_features
             encoder.classifier[-1] = nn.Identity()
         elif name == "clip_vit_b16":
-            from transformers import CLIPVisionModel
+            from transformers import CLIPVisionConfig, CLIPVisionModel
 
             revision = str(config["clip_revision"])
             if len(revision) != 40 or any(c not in "0123456789abcdef" for c in revision):
                 raise ValueError("clip_revision must be a pinned 40-character commit SHA")
-            encoder = CLIPVisionModel.from_pretrained(
+            # The repository stores a top-level CLIPConfig containing separate
+            # text and vision sections. Supplying the nested vision config
+            # avoids treating that top-level object as CLIPVisionConfig.
+            vision_config = CLIPVisionConfig.from_pretrained(
                 "openai/clip-vit-base-patch16", revision=revision
+            )
+            encoder = CLIPVisionModel.from_pretrained(
+                "openai/clip-vit-base-patch16",
+                revision=revision,
+                config=vision_config,
             )
             width = encoder.config.hidden_size
         else:
