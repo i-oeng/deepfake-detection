@@ -192,6 +192,8 @@ The run writes its resolved config, best checkpoint, SHA-256 checksum, epoch
 history, and frame/video metrics to `artifacts/rgb/<run-id>/`. It reads only
 manifest-listed images. These first results are exploratory because the DF40
 catalog has no identity IDs, so identity overlap has not been ruled out.
+The first completed run is summarized in
+[the RGB pilot report](reports/experiments/df40_rgb_resnet18_pilot.md).
 
 ## Notebook
 
