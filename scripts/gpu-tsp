@@ -31,6 +31,9 @@ esac
 job_id="$(tsp "$@")"
 printf '%s\n' "$job_id"
 if [[ "$job_id" =~ ^[0-9]+$ ]]; then
-  output_path="$(tsp -o "$job_id")"
-  "$project_root/scripts/share-task-output" "$output_path"
+  # A queued job has no output path yet. Detach a quiet watcher so it can
+  # widen the mkstemp file as soon as the job starts, while TS_ONFINISH keeps
+  # the same guarantee after completion.
+  nohup "$project_root/scripts/share-task-output" --job "$job_id" \
+    </dev/null >/dev/null 2>&1 &
 fi
