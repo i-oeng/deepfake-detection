@@ -460,6 +460,7 @@ def partition_df40_unseen(catalog_path: Path, output: Path, *, seed: str) -> dic
     }
 
 
+SYNTHESIS = "entire_face_synthesis"
 # FOMM is published only in DF40's training archive, so it has no held-out videos.
 HELDOUT_METHODS = (
     "simswap", "blendface", "wav2lip", "sadtalker", "stylegan2", "sd21", "dit", "starganv2",
@@ -479,18 +480,24 @@ def partition_df40_heldout(
     output: Path,
     *,
     downloads_root: Path | None = None,
+    exclude_videos: frozenset[str] = frozenset(),
 ) -> dict[str, Any]:
     """Collect evaluation-archive videos whose sources never reach frozen train or validation.
 
     Every row is assigned to ``test``. The frame sampler later chooses videos and
-    frames from this pool, so this step only decides eligibility.
+    frames from this pool, so this step only decides eligibility. ``exclude_videos``
+    removes video IDs that a previous content audit found colliding with the
+    reference, so the sampler can choose replacements.
     """
     owned: set[str] = set()
+    owned_images: set[tuple[str, str]] = set()
     with reference_manifest.open(newline="", encoding="utf-8") as stream:
         for row in csv.DictReader(stream):
             if row["split"] in {"train", "validation"}:
                 owned.update(_source_entities(row["source_domain"], row["video_id"]))
                 owned.update(part for part in row["lineage_video_ids"].split("|") if part)
+                if row["manipulation_family"] == SYNTHESIS:
+                    owned_images.add((row["fake_method"], row["frame_index"]))
     with catalog_path.open(newline="", encoding="utf-8") as stream:
         reader = csv.DictReader(stream)
         if not set(COLUMNS).issubset(reader.fieldnames or ()):
@@ -508,6 +515,14 @@ def partition_df40_heldout(
         entities = _heldout_entities(row["source_domain"], row["video_id"])
         if not entities or owned.intersection(entities):
             excluded[row["source_domain"]] += 1
+            continue
+        # Synthesis folders mimic source videos, but the archives reuse each
+        # generated image, numbered by frame index, under different folders.
+        if (row["fake_method"], row["frame_index"]) in owned_images:
+            excluded["synthesis_image"] += 1
+            continue
+        if row["video_id"] in exclude_videos:
+            excluded["content_collision"] += 1
             continue
         portable = _portable_row(row, "test", entities)
         # Real frames are listed once per method catalog; keep one copy.

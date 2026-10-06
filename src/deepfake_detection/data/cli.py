@@ -113,8 +113,14 @@ def _partition_df40(args: argparse.Namespace) -> int:
 
 
 def _partition_heldout(args: argparse.Namespace) -> int:
+    excluded = frozenset()
+    if args.exclude_videos:
+        # One video ID per line; text after "#" records why it was excluded.
+        lines = args.exclude_videos.read_text(encoding="utf-8").splitlines()
+        excluded = frozenset(filter(None, (line.split("#")[0].strip() for line in lines)))
     result = partition_df40_heldout(
-        args.catalog, args.reference_manifest, args.output, downloads_root=args.downloads_root
+        args.catalog, args.reference_manifest, args.output,
+        downloads_root=args.downloads_root, exclude_videos=excluded,
     )
     print(json.dumps(result, indent=2))
     return 0
@@ -245,6 +251,9 @@ def build_parser() -> argparse.ArgumentParser:
     heldout.add_argument("--output", type=Path, required=True)
     heldout.add_argument(
         "--downloads-root", type=Path, help="Drop rows whose DF40 archive member is empty"
+    )
+    heldout.add_argument(
+        "--exclude-videos", type=Path, help="File of video IDs with audited content collisions"
     )
     heldout.set_defaults(handler=_partition_heldout)
 

@@ -29,8 +29,12 @@ def test_heldout_partition_excludes_frozen_training_sources(tmp_path: Path) -> N
              "lineage_video_ids": "ff:001|ff:002"},
             {"split": "test", "source_domain": "ff", "video_id": "ff:003",
              "lineage_video_ids": "ff:003"},
+            {"split": "train", "source_domain": "ff", "video_id": "ff:167",
+             "lineage_video_ids": "ff:167", "fake_method": "stylegan2",
+             "manipulation_family": "entire_face_synthesis", "frame_index": "34"},
         ],
-        ("split", "source_domain", "video_id", "lineage_video_ids"),
+        ("split", "source_domain", "video_id", "lineage_video_ids", "fake_method",
+         "manipulation_family", "frame_index"),
     )
     shared = {"source_json": "x.json", "manipulation_family": "face_swap"}
     catalog = _write(
@@ -48,6 +52,18 @@ def test_heldout_partition_excludes_frozen_training_sources(tmp_path: Path) -> N
             # FOMM and unseen methods have no held-out role.
             _catalog_row(label="FAKE", split="test", fake_method="uniface", source_domain="ff",
                          video_id="ff:013_014", source_path="a/4.png", **shared),
+            # A generated image reused under another synthesis folder is excluded.
+            _catalog_row(label="FAKE", split="test", fake_method="stylegan2",
+                         source_domain="ff", video_id="ff:479", frame_index="34",
+                         source_path="s/34.png", manipulation_family="entire_face_synthesis",
+                         source_json="s.json"),
+            _catalog_row(label="FAKE", split="test", fake_method="stylegan2",
+                         source_domain="ff", video_id="ff:479", frame_index="35",
+                         source_path="s/35.png", manipulation_family="entire_face_synthesis",
+                         source_json="s.json"),
+            # An audited content collision is excluded by video ID.
+            _catalog_row(label="REAL", split="test", source_domain="ff", video_id="ff:021",
+                         source_path="r/2.png", source_json="a.json"),
             # The same real frame listed by two method catalogs is kept once.
             _catalog_row(label="REAL", split="test", source_domain="ff", video_id="ff:020",
                          source_path="r/1.png", source_json="a.json"),
@@ -58,15 +74,21 @@ def test_heldout_partition_excludes_frozen_training_sources(tmp_path: Path) -> N
         ],
         COLUMNS,
     )
-    result = partition_df40_heldout(catalog, reference, tmp_path / "out.csv")
+    result = partition_df40_heldout(
+        catalog, reference, tmp_path / "out.csv", exclude_videos=frozenset({"ff:021"})
+    )
     with (tmp_path / "out.csv").open(newline="", encoding="utf-8") as stream:
         rows = list(csv.DictReader(stream))
-    assert sorted(row["video_id"] for row in rows) == ["celeba:7", "ff:003_010", "ff:020"]
+    assert sorted((row["video_id"], row["frame_index"]) for row in rows) == [
+        ("celeba:7", ""), ("ff:003_010", ""), ("ff:020", ""), ("ff:479", "35"),
+    ]
     assert {row["split"] for row in rows} == {"test"}
     assert {row["lineage_video_ids"] for row in rows if row["source_domain"] == "celeba"} == {
         "celeba:7"
     }
-    assert result["excluded_rows_by_domain"] == {"ff": 1}
+    assert result["excluded_rows_by_domain"] == {
+        "content_collision": 1, "ff": 1, "synthesis_image": 1,
+    }
 
 
 def _audit_row(index: int, domain: str, method: str, **values: str) -> dict[str, str]:
