@@ -217,6 +217,45 @@ Open `notebooks/01_dataset_audit.ipynb` for a compact visual review. The
 notebook calls the package functions and contains no independent audit logic,
 so CLI and notebook results stay consistent.
 
+## Frozen unseen-method benchmark
+
+The current protocol trains on eight DF40 methods, develops on FaceDancer,
+MRAA, and StyleGAN3, and reserves UniFace, MCNet, and RDDM for one final test
+export. The frozen manifest, split counts, audit limits, model-selection rules,
+and frequency export contract are recorded in the
+[DF40 unseen-method protocol](reports/experiments/df40_unseen_protocol.md).
+
+Build and verify the lineage-aware catalog with:
+
+```bash
+deepfake-data extend-df40-archives \
+  --catalog data/raw/df40/metadata.csv \
+  --downloads-root data/raw/df40/downloads \
+  --output data/raw/df40/metadata_unseen.csv \
+  --eval-split-seed 20261006
+deepfake-data partition-df40-unseen \
+  --catalog data/raw/df40/metadata_unseen.csv \
+  --output data/raw/df40/metadata_unseen_partitioned_v3.csv \
+  --seed 20261006
+deepfake-data subset --config configs/subsets/df40_unseen_v1.yaml
+deepfake-data audit-unseen \
+  --manifest-dir data/manifests/df40_unseen_clean_v3/07f906d9ef61a537efa8
+```
+
+On xixi, both researchers submit GPU work through the same one-slot
+task-spooler queue:
+
+```bash
+scripts/setup-gpu-queue
+scripts/gpu-tsp -l
+scripts/submit-benchmark configs/training/df40_unseen_resnet18.yaml
+```
+
+The wrapper fixes `TS_SOCKET` under `runtime/gpu-queue`, where the
+`deepfake-editors` setgid group gives xixi and aida access to one queue.
+Task-spooler serializes submitted jobs; it cannot account for GPU processes
+started outside that queue.
+
 ## Quality gates
 
 The default configuration fails when it finds missing/corrupt images, duplicate

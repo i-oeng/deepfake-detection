@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Run once on xixi as a member of deepfake-editors. No root privileges needed.
+set -euo pipefail
+project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+runtime="$project_root/runtime/gpu-queue"
+mkdir -p "$runtime"
+chgrp deepfake-editors "$runtime"
+chmod 2770 "$runtime"
+"$project_root/scripts/gpu-tsp" -S 1
+stat -c '%A %U %G %n' "$runtime" "$runtime/task-spooler.sock"

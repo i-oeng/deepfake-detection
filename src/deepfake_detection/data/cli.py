@@ -8,12 +8,13 @@ from pathlib import Path
 
 from .audit import audit_manifest, write_audit_report
 from .config import load_dataset_spec
-from .df40 import normalize_df40
+from .df40 import extend_df40_from_archives, normalize_df40, partition_df40_unseen
 from .identity import audit_candidate_identity_tokens, write_candidate_identity_report
 from .manifest import build_manifest, verify_manifest
 from .materialize import materialize_df40
 from .prune import prune_cross_split
 from .subset import build_subset, load_subset_spec, verify_subset
+from .unseen import audit_unseen_manifest
 
 
 def _build(args: argparse.Namespace) -> int:
@@ -87,9 +88,21 @@ def _verify_subset(args: argparse.Namespace) -> int:
 
 
 def _normalize_df40(args: argparse.Namespace) -> int:
-    result = normalize_df40(
-        args.input_dir, args.output, eval_split_seed=args.eval_split_seed
+    result = normalize_df40(args.input_dir, args.output, eval_split_seed=args.eval_split_seed)
+    print(json.dumps(result, indent=2))
+    return 0
+
+
+def _extend_df40(args: argparse.Namespace) -> int:
+    result = extend_df40_from_archives(
+        args.catalog, args.downloads_root, args.output, eval_split_seed=args.eval_split_seed
     )
+    print(json.dumps(result, indent=2))
+    return 0
+
+
+def _partition_df40(args: argparse.Namespace) -> int:
+    result = partition_df40_unseen(args.catalog, args.output, seed=args.seed)
     print(json.dumps(result, indent=2))
     return 0
 
@@ -114,6 +127,18 @@ def _identity_tokens(args: argparse.Namespace) -> int:
         write_candidate_identity_report(report, args.output)
     print(json.dumps(report, indent=2))
     return 0
+
+
+def _audit_unseen(args: argparse.Namespace) -> int:
+    result = audit_unseen_manifest(args.manifest_dir)
+    if args.output:
+        content = json.dumps(result, indent=2, sort_keys=True) + "\n"
+        if args.output.exists() and args.output.read_text(encoding="utf-8") != content:
+            raise RuntimeError(f"refusing to overwrite changed protocol audit: {args.output}")
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(content, encoding="utf-8")
+    print(json.dumps(result, indent=2))
+    return 0 if result["passed"] else 2
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -171,6 +196,23 @@ def build_parser() -> argparse.ArgumentParser:
         help="Explicitly repartition overlapping official val/test videos for a pilot",
     )
     normalize.set_defaults(handler=_normalize_df40)
+    extend = subparsers.add_parser(
+        "extend-df40-archives",
+        help="Add methods absent from official JSON using ZIP member lineage",
+    )
+    extend.add_argument("--catalog", type=Path, required=True)
+    extend.add_argument("--downloads-root", type=Path, required=True)
+    extend.add_argument("--output", type=Path, required=True)
+    extend.add_argument("--eval-split-seed", required=True)
+    extend.set_defaults(handler=_extend_df40)
+    partition = subparsers.add_parser(
+        "partition-df40-unseen",
+        help="Assign source identities and clips to the frozen unseen-method split",
+    )
+    partition.add_argument("--catalog", type=Path, required=True)
+    partition.add_argument("--output", type=Path, required=True)
+    partition.add_argument("--seed", required=True)
+    partition.set_defaults(handler=_partition_df40)
 
     materialize = subparsers.add_parser(
         "materialize-df40", help="Extract only the verified DF40 pilot images from ZIPs"
@@ -193,6 +235,10 @@ def build_parser() -> argparse.ArgumentParser:
     identity.add_argument("--manifest-dir", type=Path, required=True)
     identity.add_argument("--output", type=Path)
     identity.set_defaults(handler=_identity_tokens)
+    unseen = subparsers.add_parser("audit-unseen", help="Gate the frozen unseen-method manifest")
+    unseen.add_argument("--manifest-dir", type=Path, required=True)
+    unseen.add_argument("--output", type=Path)
+    unseen.set_defaults(handler=_audit_unseen)
     return parser
 
 

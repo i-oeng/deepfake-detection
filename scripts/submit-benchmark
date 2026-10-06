@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Submit every GPU benchmark through the project-wide one-slot queue.
+set -euo pipefail
+project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+if [[ $# -lt 1 || $# -gt 2 ]]; then
+  echo "usage: $0 CONFIG [SEED]" >&2
+  exit 2
+fi
+
+config="$1"
+if [[ "$config" != /* ]]; then
+  config="$project_root/$config"
+fi
+if [[ ! -f "$config" ]]; then
+  echo "training config does not exist: $config" >&2
+  exit 2
+fi
+
+command=("$project_root/.venv/bin/deepfake-train-benchmark" --config "$config")
+label="$(basename "$config" .yaml)"
+if [[ $# -eq 2 ]]; then
+  if [[ ! "$2" =~ ^[0-9]+$ ]]; then
+    echo "seed must be an unsigned integer" >&2
+    exit 2
+  fi
+  command+=(--seed "$2")
+  label="$label-seed-$2"
+fi
+
+exec "$project_root/scripts/gpu-tsp" -L "$label" "${command[@]}"

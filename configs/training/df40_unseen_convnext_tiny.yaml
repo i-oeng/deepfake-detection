@@ -1,0 +1,15 @@
+experiment:
+  manifest_dir: data/manifests/df40_unseen_clean_v3/07f906d9ef61a537efa8
+  manifest_id: 07f906d9ef61a537efa8
+  manifest_sha256: 07f906d9ef61a537efa81be8da1ba1a568bb8fc339380a2987ad8ac717e73dff
+  data_root: data/raw/df40
+  output_root: artifacts/benchmark
+  seed: 20261006
+  require_cuda: true
+  model: convnext_tiny
+  batch_size: 16
+  workers: 4
+  epochs: 5
+  patience: 2
+  lr: 0.00002
+  weight_decay: 0.0001
