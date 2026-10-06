@@ -460,6 +460,75 @@ def partition_df40_unseen(catalog_path: Path, output: Path, *, seed: str) -> dic
     }
 
 
+# FOMM is published only in DF40's training archive, so it has no held-out videos.
+HELDOUT_METHODS = (
+    "simswap", "blendface", "wav2lip", "sadtalker", "stylegan2", "sd21", "dit", "starganv2",
+)
+
+
+def _heldout_entities(domain: str, video_id: str) -> tuple[str, ...]:
+    # CelebA images are single frames; each image is its own lineage unit.
+    if domain == "celeba":
+        return (f"celeba:{video_id.removeprefix('celeba:')}",)
+    return _source_entities(domain, video_id)
+
+
+def partition_df40_heldout(
+    catalog_path: Path, reference_manifest: Path, output: Path
+) -> dict[str, Any]:
+    """Collect evaluation-archive videos whose sources never reach frozen train or validation.
+
+    Every row is assigned to ``test``. The frame sampler later chooses videos and
+    frames from this pool, so this step only decides eligibility.
+    """
+    owned: set[str] = set()
+    with reference_manifest.open(newline="", encoding="utf-8") as stream:
+        for row in csv.DictReader(stream):
+            if row["split"] in {"train", "validation"}:
+                owned.update(_source_entities(row["source_domain"], row["video_id"]))
+                owned.update(part for part in row["lineage_video_ids"].split("|") if part)
+    with catalog_path.open(newline="", encoding="utf-8") as stream:
+        reader = csv.DictReader(stream)
+        if not set(COLUMNS).issubset(reader.fieldnames or ()):
+            raise ValueError("extended catalog lacks DF40 lineage columns")
+        source = list(reader)
+    rows: dict[str, dict[str, str]] = {}
+    excluded: Counter[str] = Counter()
+    for row in source:
+        if row["label"] == "FAKE":
+            # The authors' training pool stays unused, as in the frozen protocol.
+            if row["fake_method"] not in HELDOUT_METHODS or row["split"] == "train":
+                continue
+        elif row["label"] != "REAL":
+            continue
+        entities = _heldout_entities(row["source_domain"], row["video_id"])
+        if not entities or owned.intersection(entities):
+            excluded[row["source_domain"]] += 1
+            continue
+        portable = _portable_row(row, "test", entities)
+        # Real frames are listed once per method catalog; keep one copy.
+        rows.setdefault(portable["relative_path"], portable)
+    ordered = sorted(rows.values(), key=lambda row: row["relative_path"])
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with output.open("w", newline="", encoding="utf-8") as stream:
+        writer = csv.DictWriter(stream, fieldnames=COLUMNS, lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(ordered)
+    videos = Counter(
+        (row["source_domain"], row["fake_method"] or "real")
+        for row in {(r["source_domain"], r["fake_method"], r["video_id"]): r
+                    for r in ordered}.values()
+    )
+    return {
+        "catalog": str(output),
+        "rows": len(ordered),
+        "sha256": hashlib.sha256(output.read_bytes()).hexdigest(),
+        "reference_entities": len(owned),
+        "excluded_rows_by_domain": dict(sorted(excluded.items())),
+        "eligible_videos": {"/".join(key): value for key, value in sorted(videos.items())},
+    }
+
+
 def extend_df40_from_archives(
     catalog_path: Path, downloads_root: Path, output: Path, *, eval_split_seed: str
 ) -> dict[str, Any]:

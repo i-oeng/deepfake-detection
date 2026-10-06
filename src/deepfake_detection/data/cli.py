@@ -8,13 +8,18 @@ from pathlib import Path
 
 from .audit import audit_manifest, write_audit_report
 from .config import load_dataset_spec
-from .df40 import extend_df40_from_archives, normalize_df40, partition_df40_unseen
+from .df40 import (
+    extend_df40_from_archives,
+    normalize_df40,
+    partition_df40_heldout,
+    partition_df40_unseen,
+)
 from .identity import audit_candidate_identity_tokens, write_candidate_identity_report
 from .manifest import build_manifest, verify_manifest
 from .materialize import materialize_df40
 from .prune import prune_cross_split
 from .subset import build_subset, load_subset_spec, verify_subset
-from .unseen import audit_unseen_manifest
+from .unseen import audit_heldout_manifest, audit_unseen_manifest
 
 
 def _build(args: argparse.Namespace) -> int:
@@ -107,6 +112,12 @@ def _partition_df40(args: argparse.Namespace) -> int:
     return 0
 
 
+def _partition_heldout(args: argparse.Namespace) -> int:
+    result = partition_df40_heldout(args.catalog, args.reference_manifest, args.output)
+    print(json.dumps(result, indent=2))
+    return 0
+
+
 def _materialize_df40(args: argparse.Namespace) -> int:
     result = materialize_df40(
         args.subset_dir, args.downloads_root, args.data_root, dry_run=args.dry_run
@@ -130,13 +141,22 @@ def _identity_tokens(args: argparse.Namespace) -> int:
 
 
 def _audit_unseen(args: argparse.Namespace) -> int:
-    result = audit_unseen_manifest(args.manifest_dir)
-    if args.output:
+    return _write_gate(audit_unseen_manifest(args.manifest_dir), args.output)
+
+
+def _audit_heldout(args: argparse.Namespace) -> int:
+    return _write_gate(
+        audit_heldout_manifest(args.manifest_dir, args.reference_manifest_dir), args.output
+    )
+
+
+def _write_gate(result: dict, output: Path | None) -> int:
+    if output:
         content = json.dumps(result, indent=2, sort_keys=True) + "\n"
-        if args.output.exists() and args.output.read_text(encoding="utf-8") != content:
-            raise RuntimeError(f"refusing to overwrite changed protocol audit: {args.output}")
-        args.output.parent.mkdir(parents=True, exist_ok=True)
-        args.output.write_text(content, encoding="utf-8")
+        if output.exists() and output.read_text(encoding="utf-8") != content:
+            raise RuntimeError(f"refusing to overwrite changed protocol audit: {output}")
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(content, encoding="utf-8")
     print(json.dumps(result, indent=2))
     return 0 if result["passed"] else 2
 
@@ -214,6 +234,15 @@ def build_parser() -> argparse.ArgumentParser:
     partition.add_argument("--seed", required=True)
     partition.set_defaults(handler=_partition_df40)
 
+    heldout = subparsers.add_parser(
+        "partition-df40-heldout",
+        help="Collect evaluation-archive videos disjoint from a frozen protocol's training",
+    )
+    heldout.add_argument("--catalog", type=Path, required=True)
+    heldout.add_argument("--reference-manifest", type=Path, required=True)
+    heldout.add_argument("--output", type=Path, required=True)
+    heldout.set_defaults(handler=_partition_heldout)
+
     materialize = subparsers.add_parser(
         "materialize-df40", help="Extract only the verified DF40 pilot images from ZIPs"
     )
@@ -239,6 +268,13 @@ def build_parser() -> argparse.ArgumentParser:
     unseen.add_argument("--manifest-dir", type=Path, required=True)
     unseen.add_argument("--output", type=Path)
     unseen.set_defaults(handler=_audit_unseen)
+    gate = subparsers.add_parser(
+        "audit-heldout", help="Gate an evaluation-only manifest against a frozen protocol"
+    )
+    gate.add_argument("--manifest-dir", type=Path, required=True)
+    gate.add_argument("--reference-manifest-dir", type=Path, required=True)
+    gate.add_argument("--output", type=Path)
+    gate.set_defaults(handler=_audit_heldout)
     return parser
 
 
