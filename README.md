@@ -195,6 +195,22 @@ catalog has no identity IDs, so identity overlap has not been ruled out.
 The first completed run is summarized in
 [the RGB pilot report](reports/experiments/df40_rgb_resnet18_pilot.md).
 
+### Candidate identity overlap
+
+Video names from the Celeb-DF source often contain `idNN` tokens. The following
+audit checks those tokens across split boundaries, including both tokens in a
+swap name. It is a metadata warning, not a face-recognition result:
+
+```bash
+deepfake-data identity-tokens --manifest-dir data/manifests/df40_pilot_clean/bbead51c5da8f9363a1c --output reports/identity_audit/df40_pilot_clean_bbead51c5da8f9363a1c.json
+```
+
+The [pilot identity-token report](reports/identity_audit/df40_pilot_clean_bbead51c5da8f9363a1c.json)
+finds 40 candidate IDs in both validation and test, affecting 1,813 images.
+Some Celeb-DF names have no such token, and FF++ identities remain unverified.
+Identity-disjoint claims require a separate visual/lineage audit and a revised
+split protocol.
+
 ## Notebook
 
 Open `notebooks/01_dataset_audit.ipynb` for a compact visual review. The

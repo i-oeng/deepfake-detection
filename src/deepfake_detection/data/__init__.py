@@ -2,6 +2,7 @@
 
 from .audit import AuditFailure, audit_manifest, write_audit_report
 from .config import DatasetSpec, load_dataset_spec
+from .identity import audit_candidate_identity_tokens, write_candidate_identity_report
 from .manifest import ManifestArtifact, build_manifest, verify_manifest
 from .materialize import materialize_df40
 from .prune import prune_cross_split
@@ -20,6 +21,7 @@ __all__ = [
     "SubsetArtifact",
     "SubsetSpec",
     "audit_manifest",
+    "audit_candidate_identity_tokens",
     "build_manifest",
     "build_subset",
     "load_dataset_spec",
@@ -29,4 +31,5 @@ __all__ = [
     "verify_manifest",
     "verify_subset",
     "write_audit_report",
+    "write_candidate_identity_report",
 ]

@@ -9,6 +9,7 @@ from pathlib import Path
 from .audit import audit_manifest, write_audit_report
 from .config import load_dataset_spec
 from .df40 import normalize_df40
+from .identity import audit_candidate_identity_tokens, write_candidate_identity_report
 from .manifest import build_manifest, verify_manifest
 from .materialize import materialize_df40
 from .prune import prune_cross_split
@@ -107,6 +108,14 @@ def _prune_cross_split(args: argparse.Namespace) -> int:
     return 0
 
 
+def _identity_tokens(args: argparse.Namespace) -> int:
+    report = audit_candidate_identity_tokens(args.manifest_dir)
+    if args.output:
+        write_candidate_identity_report(report, args.output)
+    print(json.dumps(report, indent=2))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="deepfake-data",
@@ -178,6 +187,12 @@ def build_parser() -> argparse.ArgumentParser:
     prune.add_argument("--manifest-dir", type=Path, required=True)
     prune.add_argument("--output-root", type=Path, required=True)
     prune.set_defaults(handler=_prune_cross_split)
+    identity = subparsers.add_parser(
+        "identity-tokens", help="Audit candidate Celeb-DF subject tokens across splits"
+    )
+    identity.add_argument("--manifest-dir", type=Path, required=True)
+    identity.add_argument("--output", type=Path)
+    identity.set_defaults(handler=_identity_tokens)
     return parser
 
 

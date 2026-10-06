@@ -1,0 +1,109 @@
+{
+  "interpretation": "Name-derived candidate identity overlap only. Tokens can refer to source or target in manipulations; visual identity matching is still required.",
+  "manifest_id": "bbead51c5da8f9363a1c",
+  "manifest_sha256": "bbead51c5da8f9363a1c07562c14ceb8e5cf127bf3ffc7ac43391bddf1fc6c6b",
+  "row_coverage": {
+    "test": {
+      "distinct_tokens": 49,
+      "total": 1520,
+      "with_token": 1200,
+      "without_token": 320
+    },
+    "train": {
+      "distinct_tokens": 0,
+      "total": 0,
+      "with_token": 0,
+      "without_token": 0
+    },
+    "validation": {
+      "distinct_tokens": 43,
+      "total": 1270,
+      "with_token": 900,
+      "without_token": 370
+    }
+  },
+  "schema_version": 1,
+  "scope": "source_domain=cdf; all idNN tokens in video_id",
+  "split_pairs": {
+    "train_vs_test": {
+      "affected_rows": 0,
+      "affected_rows_by_split_label": [],
+      "shared_token_count": 0,
+      "shared_tokens": []
+    },
+    "train_vs_validation": {
+      "affected_rows": 0,
+      "affected_rows_by_split_label": [],
+      "shared_token_count": 0,
+      "shared_tokens": []
+    },
+    "validation_vs_test": {
+      "affected_rows": 1813,
+      "affected_rows_by_split_label": [
+        {
+          "label": "FAKE",
+          "rows": 570,
+          "split": "test"
+        },
+        {
+          "label": "REAL",
+          "rows": 393,
+          "split": "test"
+        },
+        {
+          "label": "FAKE",
+          "rows": 500,
+          "split": "validation"
+        },
+        {
+          "label": "REAL",
+          "rows": 350,
+          "split": "validation"
+        }
+      ],
+      "shared_token_count": 40,
+      "shared_tokens": [
+        "id0",
+        "id1",
+        "id10",
+        "id12",
+        "id13",
+        "id16",
+        "id19",
+        "id2",
+        "id20",
+        "id21",
+        "id22",
+        "id24",
+        "id25",
+        "id26",
+        "id27",
+        "id28",
+        "id29",
+        "id3",
+        "id31",
+        "id32",
+        "id33",
+        "id34",
+        "id35",
+        "id36",
+        "id37",
+        "id39",
+        "id4",
+        "id42",
+        "id44",
+        "id48",
+        "id50",
+        "id51",
+        "id52",
+        "id53",
+        "id56",
+        "id57",
+        "id59",
+        "id6",
+        "id7",
+        "id9"
+      ]
+    }
+  }
+}
