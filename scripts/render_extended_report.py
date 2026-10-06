@@ -7,6 +7,8 @@ import argparse
 import json
 from pathlib import Path
 
+from deepfake_detection.train import corruptions
+
 METRICS = (
     ("auroc", "AUROC"),
     ("average_precision", "AP"),
@@ -54,8 +56,8 @@ def family_tables(report: dict) -> list[str]:
 
 
 def method_table(report: dict, run: str) -> list[str]:
-    lines = [f"### Per-method AUROC, {run}", "", "| Protocol | Method | Videos | AUROC | AP |",
-             "|---|---|---:|---:|---:|"]
+    lines = [f"### Per-method AUROC, {run}", "",
+             "| Protocol | Method | Videos (incl. real) | AUROC | AP |", "|---|---|---:|---:|---:|"]
     for domain, title in PROTOCOLS:
         result = report["runs"][run]["heldout"][domain]
         for method, values in sorted(result["by_method"].items()):
@@ -84,7 +86,9 @@ def robustness(report: dict, runs: dict[str, str]) -> list[str]:
             table = report["robustness"].get(run, {}).get(key)
             if not table:
                 continue
-            settings = settings or [name for name in table if name != "clean"]
+            # Pre-registered order: corruption type, then increasing severity.
+            settings = settings or [corruptions.label(*s) for s in corruptions.settings()
+                                    if corruptions.label(*s) in table]
             cells = [f"{table['clean']['auroc']:.3f}"] + [
                 f"{table[name]['auroc']:.3f}" for name in settings]
             rows.append(f"| {label} | " + " | ".join(cells) + " |")
@@ -132,6 +136,13 @@ def profile(result: dict) -> list[str]:
         one, many = entry["latency"]
         lines.append(f"| {name} | {entry['parameters'] / 1e6:.1f} | {one['median_ms']:.1f} | "
                      f"{many['images_per_second']:.0f} | {entry['peak_memory_mib_batch32']:.0f} |")
+    models = result["models"]
+    if {"CLIP ViT-B/16", "Frequency"} <= models.keys():
+        rgb, frequency = models["CLIP ViT-B/16"], models["Frequency"]
+        lines += ["", "Late fusion runs both branches, so CLIP + frequency costs "
+                  f"{(rgb['parameters'] + frequency['parameters']) / 1e6:.1f} M parameters and "
+                  f"{rgb['latency'][0]['median_ms'] + frequency['latency'][0]['median_ms']:.1f} ms "
+                  "per image at batch 1, for no accuracy gain on the frozen test."]
     return [*lines, ""]
 
 
