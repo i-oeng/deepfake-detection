@@ -1,10 +1,10 @@
 dataset:
   name: df40_heldout_v1
-  version: "10599a57246a84e5bdaf"
+  version: "51c80113d23476dc8cdc"
   data_root: data/raw/df40
   # Evaluation-only P1-P3 protocol from df40_extended_evaluation_protocol.md.
   # `deepfake-data audit-heldout` gates it against the frozen manifest.
-  metadata_path: ../../subsets/df40/df40_heldout_v1/10599a57246a84e5bdaf/subset.csv
+  metadata_path: ../../subsets/df40/df40_heldout_v1/51c80113d23476dc8cdc/subset.csv
   output_root: data/manifests
   report_root: reports/data_audit
   id_column: image_id
