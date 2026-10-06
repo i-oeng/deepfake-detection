@@ -133,6 +133,45 @@ method, and 300 per unseen test method. With 1:1 real/fake balancing, this is
 16,000 images. Strict quotas reject shortfalls; the pilot remains exploratory
 until source identity and image payload audits pass.
 
+### Materialize and audit the selected images
+
+The official DF40 method ZIPs contain processed fake images. The authors publish
+the processed [FF++ and Celeb-DF real images](https://github.com/YZY-stack/DF40#-df40-dataset)
+separately. Put them under `data/raw/df40/downloads/real/` with the names
+`FaceForensics++_real_data_for_DF40.zip` and
+`Celeb-DF-v2_real_data_for_DF40.zip`. The selected StarGANv2 real images are
+already in `data/raw/df40/downloads/test/starganv2.zip`.
+
+```powershell
+deepfake-data materialize-df40 --subset-dir data/subsets/df40/df40_pilot_v1/743545ebfd6972c3a5fe --downloads-root data/raw/df40/downloads --data-root data/raw/df40 --dry-run
+deepfake-data materialize-df40 --subset-dir data/subsets/df40/df40_pilot_v1/743545ebfd6972c3a5fe --downloads-root data/raw/df40/downloads --data-root data/raw/df40
+deepfake-data build --config configs/datasets/df40_pilot.yaml
+```
+
+Materialization verifies the subset checksums and resolves all 16,000 ZIP members
+before writing images. It extracts only selected members, checks ZIP CRCs, and
+refuses to replace a changed file. The pilot dataset config pins the subset ID,
+so the manifest audits the selected images rather than the full catalog.
+
+The first image audit found identical and visually matching frames across
+splits, despite disjoint video names. For the baseline, derive a separate
+immutable subset that retains test before validation before train when image
+fingerprints collide. It removes each affected video group in the lower
+priority split, including nearby frames. The original 16,000-image selection
+and failed audit remain as provenance.
+
+```powershell
+deepfake-data prune-cross-split --subset-dir data/subsets/df40/df40_pilot_v1/743545ebfd6972c3a5fe --manifest-dir data/manifests/df40_pilot/d1907365d1be9a1e20b1 --output-root data/subsets/df40/df40_pilot_clean_v1
+deepfake-data verify-subset --subset-dir data/subsets/df40/df40_pilot_clean_v1/4cc6eda3de869c8b7846
+deepfake-data build --config configs/datasets/df40_pilot_clean.yaml
+```
+
+This removed 130 images in 13 video groups. The clean pilot contains 15,870
+images. Its `subset.json` records the input hashes, fingerprint collisions,
+removed groups, and per-split counts. The final audit still checks all images
+and split boundaries; this filtering does not establish identity disjointness
+because the official metadata lacks identity IDs.
+
 ## Notebook
 
 Open `notebooks/01_dataset_audit.ipynb` for a compact visual review. The
