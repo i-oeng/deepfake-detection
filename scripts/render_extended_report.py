@@ -70,7 +70,8 @@ def comparisons(report: dict) -> list[str]:
     for name, result in report["comparisons"].items():
         low, high = result["ci95"]
         lines.append(f"| {name} | {result['difference']:+.4f} | [{low:+.4f}, {high:+.4f}] | "
-                     f"{result['source_groups']} | {'yes' if result['clear_improvement'] else 'no'} |")
+                     f"{result['source_groups']} | "
+                     f"{'yes' if result['clear_improvement'] else 'no'} |")
     return [*lines, ""]
 
 
@@ -111,7 +112,8 @@ def p5(result: dict) -> list[str]:
             f"{entry['accuracy_at_threshold']:.4f} | {primary['all']['auroc']:.4f} | "
             f"{primary['identity_disjoint']['auroc']:.4f} | "
             f"{entry['abstain_as_0.5']['all']['auroc']:.4f} | "
-            f"{primary['all']['average_precision']:.4f} | {primary['all']['tpr_at_1pct_fpr']:.4f} | "
+            f"{primary['all']['average_precision']:.4f} | "
+            f"{primary['all']['tpr_at_1pct_fpr']:.4f} | "
             f"{primary['all']['brier']:.4f} | {primary['all']['ece_10']:.4f} |")
     h2 = result["h2"]
     low, high = h2["ci95"]
@@ -151,7 +153,8 @@ def main() -> int:
         "# DF40 extended evaluation and release result", "",
         args.outcome.read_text(encoding="utf-8").strip(), "",
         "## Frozen inputs", "",
-        f"- Protocol: [`df40_extended_evaluation_protocol.md`](df40_extended_evaluation_protocol.md)",
+        "- Protocol: [`df40_extended_evaluation_protocol.md`]"
+        "(df40_extended_evaluation_protocol.md)",
         f"- Held-out manifest: `{extended['heldout_manifest']}`, gated by "
         f"[`df40_heldout_v1_{extended['heldout_manifest']}.json`]"
         f"(../identity_audit/df40_heldout_v1_{extended['heldout_manifest']}.json)",
