@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 
 from deepfake_detection.train.evaluation import report
-from deepfake_detection.train.fusion import align, blend, load_export
+from deepfake_detection.train.fusion_contract import align, blend, load_export
 
 
 def _row(sample: str, label: int, score: float, video: str, method: str = "") -> dict:

@@ -9,7 +9,7 @@ import statistics
 from pathlib import Path
 
 from .evaluation import report
-from .fusion import align, load_export
+from .fusion_contract import align, load_export
 
 METRICS = ("auroc", "average_precision", "tpr_at_1pct_fpr", "brier", "ece_10")
 
