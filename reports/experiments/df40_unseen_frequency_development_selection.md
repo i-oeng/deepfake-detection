@@ -69,3 +69,73 @@ Unselected development runs, for completeness:
 | all inputs / 20261006 | `ed9cc8919d276a92b78294178666c574d4c138a7c8ba01849e6b3a4f9384bd79` |
 | all inputs / 20261007 | `e97db92bc74ad2a30a61b9095a418111520932702b600a8f447150d3a8c2311e` |
 | all inputs / 20261008 | `f5316acc6520c5b3d5956ba569abad796ff65c5621c7902dee84f066e3f144f5` |
+
+## Pre-registered final-test analysis
+
+Recorded before any frequency-branch or fusion test export. Nothing below may change after test
+predictions exist; any analysis not listed here will be labelled exploratory.
+
+### Frozen inputs
+
+| Pair | RGB checkpoint (SHA-256 prefix) | Frequency checkpoint | Development fusion report | RGB weight |
+|---|---|---|---|---:|
+| ConvNeXt / seed 20261006 | `ad14c9a48fe78bc3` | `c1866cc633d40ce7` | `convnext_tiny-20261006-freq-20261006/fusion-c52d3a81e14e77b5fca8.json` | 0.90 |
+| ConvNeXt / seed 20261007 | `5b0f020f33ed672d` | `1f515fd48dffba3f` | `convnext_tiny-20261007-freq-20261007/fusion-07962198e70b7fc5f627.json` | 0.80 |
+| ConvNeXt / seed 20261008 | `cd153dc09709a2df` | `e2ffd178f072964e` | `convnext_tiny-20261008-freq-20261008/fusion-8975ad3a9f66216c69c2.json` | 1.00 |
+| CLIP / frequency seed 20261006 | `a3bcb4fb29af0d4d` | `c1866cc633d40ce7` | `clip_vit_b16-20261006-freq-20261006/fusion-401515aad793a7736588.json` | 0.80 |
+| CLIP / frequency seed 20261007 | `a3bcb4fb29af0d4d` | `1f515fd48dffba3f` | `clip_vit_b16-20261006-freq-20261007/fusion-00df12e689d0ad500e85.json` | 0.80 |
+| CLIP / frequency seed 20261008 | `a3bcb4fb29af0d4d` | `e2ffd178f072964e` | `clip_vit_b16-20261006-freq-20261008/fusion-eb32f70046e85c555f74.json` | 0.85 |
+
+The six development fusion reports are committed under `reports/fusion/development/`. The
+comparison script reads each weight from its report and refuses to run if either checkpoint
+hash differs, so no weight can be supplied or tuned after test export. A weight of 1.00 means
+the blend equals ConvNeXt alone for that seed; it is kept as selected.
+
+### Questions
+
+1. **Primary.** Does adding the frequency branch to the frozen RGB finalist help on unseen test
+   methods? *ConvNeXt + frequency (tuned blend) versus ConvNeXt alone.*
+2. **Secondary.** The same question for *CLIP + frequency (tuned blend) versus CLIP alone*,
+   included because development data suggested a Celeb-DF gain there.
+
+Only the tuned blend can support a claim. The equal-logit blend and the gated feature head are
+reported descriptively; development data already showed the gated head losing Celeb-DF
+transfer (0.79 versus 0.95 for CLIP alone).
+
+### Statistic
+
+For each pair and domain: video-level macro AUROC difference, tuned blend minus the same RGB
+model, with the source-lineage grouped paired bootstrap already used for the RGB result
+(`grouped_bootstrap_difference`, 2,000 replicates, seed 20261006, 95% percentile interval).
+FF++ is the primary domain. Celeb-DF is reported with the same statistic but is low-power
+(five source groups in the RGB final test), and its intervals are expected to be wide.
+
+### Decision rule
+
+For one seed, frequency is judged to help if the 95% interval excludes zero on FF++ or on
+Celeb-DF, and the FF++ difference is at least -0.01. For each question, frequency helps if the
+rule holds for a majority (at least two) of the three seeds. The rule is implemented in
+`train/fusion_comparison.py` (`pair_passes`, `verdict`) and applied without modification.
+
+### Expected outcome, stated in advance
+
+FF++ test macro AUROC is already 0.9985 (ConvNeXt) and 0.9990 (CLIP), so an FF++ improvement
+is unlikely to be measurable. If frequency helps, it is expected on Celeb-DF, mainly for CLIP.
+A null result for either question will be reported as such.
+
+### Reported for every pair (descriptive)
+
+Per held-out method and macro, for FF++ and Celeb-DF: AUROC, average precision, TPR at 1% FPR,
+Brier score, and ECE for the RGB model, the frequency branch, and each blend; three-seed mean,
+sample standard deviation, and range; and the existing fusion-versus-ResNet18 bootstrap from
+`deepfake-fuse --final-test`.
+
+### Procedure
+
+1. Export test predictions once for the three selected frequency runs:
+   `deepfake-train-benchmark --export-test-run <run>`.
+2. Run `deepfake-fuse --final-test --baseline-run <ResNet18 run>` for the six pairs.
+3. Run `python -m deepfake_detection.train.fusion_comparison --label convnext_plus_frequency`
+   with the three ConvNeXt pairs, and `--label clip_plus_frequency` with the three CLIP pairs.
+4. Publish `df40_unseen_frequency_final.md` with every pre-registered number, whatever the
+   outcome.
