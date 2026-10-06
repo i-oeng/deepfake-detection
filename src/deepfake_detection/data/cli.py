@@ -10,6 +10,8 @@ from .audit import audit_manifest, write_audit_report
 from .config import load_dataset_spec
 from .df40 import normalize_df40
 from .manifest import build_manifest, verify_manifest
+from .materialize import materialize_df40
+from .prune import prune_cross_split
 from .subset import build_subset, load_subset_spec, verify_subset
 
 
@@ -84,7 +86,23 @@ def _verify_subset(args: argparse.Namespace) -> int:
 
 
 def _normalize_df40(args: argparse.Namespace) -> int:
-    result = normalize_df40(args.input_dir, args.output)
+    result = normalize_df40(
+        args.input_dir, args.output, eval_split_seed=args.eval_split_seed
+    )
+    print(json.dumps(result, indent=2))
+    return 0
+
+
+def _materialize_df40(args: argparse.Namespace) -> int:
+    result = materialize_df40(
+        args.subset_dir, args.downloads_root, args.data_root, dry_run=args.dry_run
+    )
+    print(json.dumps(result, indent=2))
+    return 0
+
+
+def _prune_cross_split(args: argparse.Namespace) -> int:
+    result = prune_cross_split(args.subset_dir, args.manifest_dir, args.output_root)
     print(json.dumps(result, indent=2))
     return 0
 
@@ -139,7 +157,27 @@ def build_parser() -> argparse.ArgumentParser:
     )
     normalize.add_argument("--input-dir", type=Path, required=True)
     normalize.add_argument("--output", type=Path, required=True)
+    normalize.add_argument(
+        "--eval-split-seed",
+        help="Explicitly repartition overlapping official val/test videos for a pilot",
+    )
     normalize.set_defaults(handler=_normalize_df40)
+
+    materialize = subparsers.add_parser(
+        "materialize-df40", help="Extract only the verified DF40 pilot images from ZIPs"
+    )
+    materialize.add_argument("--subset-dir", type=Path, required=True)
+    materialize.add_argument("--downloads-root", type=Path, required=True)
+    materialize.add_argument("--data-root", type=Path, required=True)
+    materialize.add_argument("--dry-run", action="store_true")
+    materialize.set_defaults(handler=_materialize_df40)
+    prune = subparsers.add_parser(
+        "prune-cross-split", help="Remove colliding video groups from an audited subset"
+    )
+    prune.add_argument("--subset-dir", type=Path, required=True)
+    prune.add_argument("--manifest-dir", type=Path, required=True)
+    prune.add_argument("--output-root", type=Path, required=True)
+    prune.set_defaults(handler=_prune_cross_split)
     return parser
 
 

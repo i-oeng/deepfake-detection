@@ -1,0 +1,184 @@
+{
+  "best_epoch": 3,
+  "checkpoint_sha256": "f11f56d7bb75621c55087c093619c86f51b25501d14d28410236b0ea7e9c2f15",
+  "cuda_version": "13.0",
+  "device": "cuda",
+  "git_commit": "aeeea1a3f009e9d1078bfc3c2c9b214a9bf0aa7b",
+  "gpu": "NVIDIA GeForce RTX 5060",
+  "history": [
+    {
+      "epoch": 1,
+      "phase": "head",
+      "train_loss": 0.6162128969326915,
+      "validation_video_auroc": 0.7087912087912088
+    },
+    {
+      "epoch": 2,
+      "phase": "finetune",
+      "train_loss": 0.26017062246999484,
+      "validation_video_auroc": 0.7607392607392608
+    },
+    {
+      "epoch": 3,
+      "phase": "finetune",
+      "train_loss": 0.11926240204714689,
+      "validation_video_auroc": 0.7975357975357975
+    }
+  ],
+  "limitation": "Exploratory run: source identity IDs are absent; identity disjointness is unverified.",
+  "manifest_id": "bbead51c5da8f9363a1c",
+  "manifest_sha256": "bbead51c5da8f9363a1c07562c14ceb8e5cf127bf3ffc7ac43391bddf1fc6c6b",
+  "model": "resnet18",
+  "preprocessing": "df40-authors-crops-rgb-resize224-v1",
+  "pretrained_weights_sha256": "f37072fd47e89c5e827621c5baffa7500819f7896bbacec160b1a16c560e07ec",
+  "run_id": "01175dd90df8d9285619",
+  "seed": 20261006,
+  "test_frame": {
+    "auroc": 0.5980635416666666,
+    "balanced_accuracy": 0.5695833333333333,
+    "by_domain": {
+      "cdf": {
+        "auroc": 0.6335725415512465,
+        "samples": 1520
+      },
+      "celeba": {
+        "auroc": 0.4908388888888889,
+        "samples": 600
+      },
+      "ff": {
+        "auroc": 0.6871173469387755,
+        "samples": 280
+      }
+    },
+    "fake_recall_by_method": {
+      "blendface": {
+        "recall": 0.86,
+        "samples": 300
+      },
+      "dit": {
+        "recall": 0.37,
+        "samples": 300
+      },
+      "sadtalker": {
+        "recall": 0.21666666666666667,
+        "samples": 300
+      },
+      "starganv2": {
+        "recall": 0.14,
+        "samples": 300
+      }
+    },
+    "samples": 2400,
+    "threshold": 0.19992599487304688
+  },
+  "test_video": {
+    "auroc": 0.5146140730539708,
+    "balanced_accuracy": 0.5143878287100794,
+    "by_domain": {
+      "cdf": {
+        "auroc": 0.6765208475734792,
+        "samples": 153
+      },
+      "celeba": {
+        "auroc": 0.4908388888888889,
+        "samples": 600
+      },
+      "ff": {
+        "auroc": 0.6683673469387755,
+        "samples": 28
+      }
+    },
+    "fake_recall_by_method": {
+      "blendface": {
+        "recall": 0.9,
+        "samples": 30
+      },
+      "dit": {
+        "recall": 0.7,
+        "samples": 30
+      },
+      "sadtalker": {
+        "recall": 0.26666666666666666,
+        "samples": 30
+      },
+      "starganv2": {
+        "recall": 0.14,
+        "samples": 300
+      }
+    },
+    "samples": 781,
+    "threshold": 0.19992599487304688
+  },
+  "threshold_source": "validation_video_balanced_accuracy",
+  "torch_version": "2.14.1+cu130",
+  "torchvision_version": "0.29.1+cu130",
+  "validation_frame": {
+    "auroc": 0.7624841824841825,
+    "balanced_accuracy": 0.6827589077589078,
+    "by_domain": {
+      "cdf": {
+        "auroc": 0.7031349206349207,
+        "samples": 1270
+      },
+      "ff": {
+        "auroc": 0.9685969387755102,
+        "samples": 280
+      }
+    },
+    "fake_recall_by_method": {
+      "sd21": {
+        "recall": 1.0,
+        "samples": 200
+      },
+      "simswap": {
+        "recall": 0.8263157894736842,
+        "samples": 190
+      },
+      "stylegan2": {
+        "recall": 0.495,
+        "samples": 200
+      },
+      "wav2lip": {
+        "recall": 0.7,
+        "samples": 190
+      }
+    },
+    "samples": 1550,
+    "threshold": 0.19992599487304688
+  },
+  "validation_video": {
+    "auroc": 0.7975357975357975,
+    "balanced_accuracy": 0.7216117216117216,
+    "by_domain": {
+      "cdf": {
+        "auroc": 0.7375992063492064,
+        "samples": 127
+      },
+      "ff": {
+        "auroc": 0.9897959183673469,
+        "samples": 28
+      }
+    },
+    "fake_recall_by_method": {
+      "sd21": {
+        "recall": 1.0,
+        "samples": 20
+      },
+      "simswap": {
+        "recall": 0.8421052631578947,
+        "samples": 19
+      },
+      "stylegan2": {
+        "recall": 0.85,
+        "samples": 20
+      },
+      "wav2lip": {
+        "recall": 0.7894736842105263,
+        "samples": 19
+      }
+    },
+    "samples": 155,
+    "threshold": 0.19992599487304688
+  },
+  "weights": "IMAGENET1K_V1"
+}

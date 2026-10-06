@@ -22,25 +22,25 @@ subset:
   real_to_fake_ratio: 1.0
   require_disjoint_train_test_methods: true
 
-  # Keep false for the first catalog inspection: any unavailable quota is
-  # recorded in subset.json. Switch to true before freezing report experiments.
-  strict_quotas: false
+  # The pilot quotas fit the available real frames at ten frames per video.
+  # Keep strict checks so a changed source catalog cannot silently unbalance it.
+  strict_quotas: true
 
   # Target: at most 10 frames per video and a balanced real sample from the
   # same source domain. Caps are per fake method, not per manipulation family.
   splits:
     train:
       fake_methods: [simswap, wav2lip, stylegan2, sd21]
-      max_images_per_method: 2500
+      max_images_per_method: 1500
       max_groups_per_method: 2500
       max_frames_per_group: 10
     validation:
       fake_methods: [simswap, wav2lip, stylegan2, sd21]
-      max_images_per_method: 500
+      max_images_per_method: 200
       max_groups_per_method: 500
       max_frames_per_group: 10
     test:
       fake_methods: [blendface, sadtalker, dit, starganv2]
-      max_images_per_method: 1000
+      max_images_per_method: 300
       max_groups_per_method: 1000
       max_frames_per_group: 10
