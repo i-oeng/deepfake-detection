@@ -30,6 +30,33 @@ def _read_csv(path: Path) -> tuple[list[str], list[dict[str, str]]]:
         return list(reader.fieldnames), list(reader)
 
 
+def collision_removals(
+    manifest: list[dict[str, str]],
+) -> tuple[set[tuple[str, str]], Counter[str]]:
+    """(split, video_id) groups to drop so no fingerprint spans two splits.
+
+    Each colliding fingerprint keeps its highest-priority split (test, then
+    validation, then train); every other split loses the whole video group.
+    """
+    remove: set[tuple[str, str]] = set()
+    collisions: Counter[str] = Counter()
+    for column in FINGERPRINTS:
+        groups: dict[str, list[dict[str, str]]] = defaultdict(list)
+        for row in manifest:
+            groups[row[column]].append(row)
+        for group in groups.values():
+            splits = {row["split"] for row in group}
+            if len(splits) < 2:
+                continue
+            collisions[column] += 1
+            keep_split = max(splits, key=SPLIT_PRIORITY.__getitem__)
+            remove.update(
+                (row["split"], row["video_id"])
+                for row in group if row["split"] != keep_split
+            )
+    return remove, collisions
+
+
 def prune_cross_split(
     subset_dir: str | Path, manifest_dir: str | Path, output_root: str | Path
 ) -> dict[str, object]:
@@ -69,23 +96,7 @@ def prune_cross_split(
         if not row["video_id"] or row["split"] not in SPLIT_PRIORITY:
             raise ValueError(f"missing video ID or unsupported split: {source_id}")
 
-    remove: set[tuple[str, str]] = set()
-    collisions = Counter()
-    for column in FINGERPRINTS:
-        groups: dict[str, list[dict[str, str]]] = defaultdict(list)
-        for row in manifest:
-            groups[row[column]].append(row)
-        for group in groups.values():
-            splits = {row["split"] for row in group}
-            if len(splits) < 2:
-                continue
-            collisions[column] += 1
-            keep_split = max(splits, key=SPLIT_PRIORITY.__getitem__)
-            remove.update(
-                (row["split"], row["video_id"])
-                for row in group if row["split"] != keep_split
-            )
-
+    remove, collisions = collision_removals(manifest)
     kept = [row for row in subset if (row["split"], row["video_id"]) not in remove]
     if not kept:
         raise ValueError("pruning would empty the subset")

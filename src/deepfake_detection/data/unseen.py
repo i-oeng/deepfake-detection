@@ -63,7 +63,9 @@ def row_links(row: dict[str, str]) -> dict[str, set[str]]:
     }
 
 
-def audit_unseen_rows(rows: list[dict[str, str]]) -> dict:
+def audit_unseen_rows(
+    rows: list[dict[str, str]], methods: dict[str, set[str]] | None = None
+) -> dict:
     """Require documented parents and disjoint source clips and identities.
 
     Name-derived identities are useful leakage signals but not proof of identity
@@ -71,17 +73,18 @@ def audit_unseen_rows(rows: list[dict[str, str]]) -> dict:
     """
     if not rows or not REQUIRED.issubset(rows[0]):
         raise ValueError("manifest lacks unseen-method audit columns")
+    methods = METHODS if methods is None else methods
     failures: list[str] = []
     counts: Counter[tuple[str, str]] = Counter()
     links: dict[str, dict[str, set[str]]] = {name: defaultdict(set) for name in LINK_KINDS}
     missing_parent = missing_identity = 0
     for row in rows:
         split = row["split"]
-        if split not in METHODS or row["status"] != "ok":
+        if split not in methods or row["status"] != "ok":
             failures.append(f"invalid split or decode status: {row['sample_id']}")
             continue
         method = row["fake_method"] if row["label"] == "FAKE" else "real"
-        if row["label"] == "FAKE" and method not in METHODS[split]:
+        if row["label"] == "FAKE" and method not in methods[split]:
             failures.append(f"method {method} is forbidden in {split}")
         counts[(split, method)] += 1
         keys = row_links(row)
@@ -90,8 +93,8 @@ def audit_unseen_rows(rows: list[dict[str, str]]) -> dict:
         for kind, values in keys.items():
             for value in values:
                 links[kind][value].add(split)
-    for split, methods in METHODS.items():
-        for method in sorted(methods):
+    for split, allowed in methods.items():
+        for method in sorted(allowed):
             if counts[(split, method)] == 0:
                 failures.append(f"missing {split}/{method} samples")
         if counts[(split, "real")] == 0:
@@ -120,13 +123,13 @@ def audit_unseen_rows(rows: list[dict[str, str]]) -> dict:
     }
 
 
-def audit_unseen_manifest(directory: Path) -> dict:
+def audit_unseen_manifest(directory: Path, methods: dict[str, set[str]] | None = None) -> dict:
     valid, errors = verify_manifest(directory)
     if not valid:
         raise ValueError(f"invalid immutable manifest: {errors}")
     with (directory / "manifest.csv").open(newline="", encoding="utf-8") as stream:
         rows = list(csv.DictReader(stream))
-    result = audit_unseen_rows(rows)
+    result = audit_unseen_rows(rows, methods)
     result["manifest_id"] = directory.name
     result["manifest_sha256"] = json.loads((directory / "manifest.json").read_text())[
         "manifest_sha256"
