@@ -39,3 +39,12 @@ transfer to raw Celeb-DF video.
 - **Frequency branch.** Its checkpoints are not readable from the shared
   project directory, so it was not scored on P1–P4. Its development and
   final-test results stand as published in PR #16.
+- **Exploratory: whole frames instead of face crops.** Not pre-registered. On
+  the same 517 raw Celeb-DF videos and frames, feeding each frozen model the
+  whole frame (stretched or letterboxed to 224 px) instead of the aligned face
+  crop lowers video AUROC for every model: CLIP 0.749 to 0.610/0.641, ConvNeXt
+  0.654 to 0.571/0.561, ResNet18 0.607 to 0.581/0.554. For CLIP the paired
+  bootstrap intervals exclude zero (−0.139 [−0.179, −0.040] stretched). These
+  models were trained on crops only, so this rules out swapping the input, not
+  a model trained on whole frames. Data:
+  [`df40_whole_frame_comparison.json`](df40_whole_frame_comparison.json).
