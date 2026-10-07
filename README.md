@@ -260,6 +260,58 @@ owner-only `0600` output mode to group-readable and group-writable `0660`.
 Task-spooler serializes submitted jobs; it cannot account for GPU processes
 started outside that queue.
 
+## Extended evaluation
+
+The [extended evaluation protocol](reports/experiments/df40_extended_evaluation_protocol.md)
+adds seen-method (P1), seen-method Celeb-DF (P2), CelebA face-editing (P3),
+robustness (P4), and raw Celeb-DF v2 video (P5) protocols, all fixed before
+scoring. Build the held-out manifest and gate it against the frozen manifest:
+
+```bash
+deepfake-data partition-df40-heldout \
+  --catalog data/raw/df40/metadata_unseen.csv \
+  --reference-manifest data/manifests/df40_unseen_clean_v3/07f906d9ef61a537efa8/manifest.csv \
+  --output data/raw/df40/metadata_heldout_v1.csv \
+  --downloads-root data/raw/df40/downloads \
+  --exclude-videos configs/subsets/df40_heldout_v1_exclusions.txt
+deepfake-data subset --config configs/subsets/df40_heldout_v1.yaml
+deepfake-data materialize-df40 --subset-dir <subset-dir> \
+  --downloads-root data/raw/df40/downloads --data-root data/raw/df40
+deepfake-data build --config configs/datasets/df40_heldout_v1.yaml
+deepfake-data audit-heldout \
+  --manifest-dir data/manifests/df40_heldout_v1/956ece9d65a3deee6b95 \
+  --reference-manifest-dir data/manifests/df40_unseen_clean_v3/07f906d9ef61a537efa8
+```
+
+Score every frozen checkpoint on P1-P4 (one GPU job per run), then build the report:
+
+```bash
+deepfake-evaluate score-all --config configs/evaluation/df40_extended.yaml --run-name clip-20261006
+deepfake-evaluate report --config configs/evaluation/df40_extended.yaml \
+  --output reports/experiments/df40_extended_evaluation.json
+python -m deepfake_detection.train.profile --output reports/experiments/df40_model_profile.json
+```
+
+## Inference
+
+Install the inference extra (`pip install -e ".[train,inference]"`). A release
+bundle holds one frozen checkpoint plus the video aggregation, Platt
+calibration, and threshold fixed on FF++ development data:
+
+```bash
+deepfake-detect bundle --run artifacts/benchmark/<run-id> --output artifacts/bundles/clip-20261006
+deepfake-detect detect --bundle artifacts/bundles/clip-20261006 photo.png clip.mp4
+```
+
+Each input prints one JSON line with `label` (`FAKE`, `REAL`, or `ABSTAIN`), the
+calibrated `probability_fake`, the threshold, the model version, and face
+decisions. Faces are found with a pinned YuNet detector and aligned to the DF40
+crop geometry; the first run downloads the detector and verifies its SHA-256.
+Videos are scored on 32 evenly spaced frames and need at least 4 accepted
+faces. Nothing is written to disk unless you build a crop artifact explicitly
+with `deepfake-detect crops`. See the [model card](MODEL_CARD.md) for intended
+use and limitations.
+
 ## Quality gates
 
 The default configuration fails when it finds missing/corrupt images, duplicate

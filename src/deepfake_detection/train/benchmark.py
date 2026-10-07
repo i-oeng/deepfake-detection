@@ -27,6 +27,7 @@ from torchvision.models import (
 from deepfake_detection.data.config import find_project_root
 from deepfake_detection.data.unseen import audit_unseen_manifest
 
+from . import corruptions
 from .common import git_commit as _git_commit
 from .common import load_manifest_rows as _load_rows
 from .common import sampling_weights as _sampling_weights
@@ -61,28 +62,41 @@ class QualityAugment:
         return image
 
 
+def build_transform(model_name: str, training: bool) -> transforms.Compose:
+    """Crop-to-tensor preprocessing shared by training, evaluation, and inference."""
+    mean, std = NORMALIZE["clip_vit_b16" if model_name == "clip_vit_b16" else "imagenet"]
+    operations: list = []
+    if training:
+        operations.extend(
+            [
+                transforms.RandomResizedCrop(
+                    224, scale=(0.88, 1.0), interpolation=transforms.InterpolationMode.BICUBIC
+                ),
+                transforms.RandomHorizontalFlip(),
+                transforms.ColorJitter(brightness=0.12, contrast=0.12, saturation=0.10),
+                QualityAugment(),
+            ]
+        )
+    else:
+        operations.append(
+            transforms.Resize((224, 224), interpolation=transforms.InterpolationMode.BICUBIC)
+        )
+    operations.extend([transforms.ToTensor(), transforms.Normalize(mean, std)])
+    return transforms.Compose(operations)
+
+
 class Images(Dataset):
-    def __init__(self, rows: list[dict[str, str]], model_name: str, training: bool) -> None:
+    def __init__(
+        self,
+        rows: list[dict[str, str]],
+        model_name: str,
+        training: bool,
+        corruption: tuple[str, float] | None = None,
+    ) -> None:
         self.rows = rows
-        mean, std = NORMALIZE["clip_vit_b16" if model_name == "clip_vit_b16" else "imagenet"]
-        operations: list = []
-        if training:
-            operations.extend(
-                [
-                    transforms.RandomResizedCrop(
-                        224, scale=(0.88, 1.0), interpolation=transforms.InterpolationMode.BICUBIC
-                    ),
-                    transforms.RandomHorizontalFlip(),
-                    transforms.ColorJitter(brightness=0.12, contrast=0.12, saturation=0.10),
-                    QualityAugment(),
-                ]
-            )
-        else:
-            operations.append(
-                transforms.Resize((224, 224), interpolation=transforms.InterpolationMode.BICUBIC)
-            )
-        operations.extend([transforms.ToTensor(), transforms.Normalize(mean, std)])
-        self.transform = transforms.Compose(operations)
+        # Evaluation-only degradation of the stored crop (robustness protocol P4).
+        self.corruption = corruption
+        self.transform = build_transform(model_name, training)
 
     def __len__(self) -> int:
         return len(self.rows)
@@ -90,7 +104,10 @@ class Images(Dataset):
     def __getitem__(self, index: int) -> tuple[torch.Tensor, torch.Tensor, int]:
         row = self.rows[index]
         with Image.open(row["_path"]) as image:
-            pixels = self.transform(image.convert("RGB"))
+            image = image.convert("RGB")
+        if self.corruption is not None:
+            image = corruptions.apply(image, *self.corruption, row["sample_id"])
+        pixels = self.transform(image)
         return pixels, torch.tensor(float(row["label"] == "FAKE")), index
 
 
@@ -177,7 +194,12 @@ def preprocessing_id(config: dict) -> str:
 
 
 def _loader(
-    rows: list[dict[str, str]], config: dict, *, training: bool, epoch: int = 0
+    rows: list[dict[str, str]],
+    config: dict,
+    *,
+    training: bool,
+    epoch: int = 0,
+    corruption: tuple[str, float] | None = None,
 ) -> DataLoader:
     generator = torch.Generator().manual_seed(int(config["seed"]) + epoch)
     sampler = (
@@ -188,7 +210,7 @@ def _loader(
         else None
     )
     return DataLoader(
-        Images(rows, config["model"], training),
+        Images(rows, config["model"], training, corruption),
         batch_size=int(config["batch_size"]),
         sampler=sampler,
         shuffle=False,
@@ -233,12 +255,16 @@ def _train_epoch(
 
 @torch.inference_mode()
 def predict(
-    model: BinaryEncoder, rows: list[dict[str, str]], config: dict, device: torch.device
+    model: BinaryEncoder,
+    rows: list[dict[str, str]],
+    config: dict,
+    device: torch.device,
+    corruption: tuple[str, float] | None = None,
 ) -> tuple[list[dict], np.ndarray]:
     model.eval()
     records: list[dict] = []
     embeddings = []
-    for images, _, indices in _loader(rows, config, training=False):
+    for images, _, indices in _loader(rows, config, training=False, corruption=corruption):
         with torch.autocast(device_type=device.type, enabled=device.type == "cuda"):
             logits, features = model(images.to(device))
         logits = logits.float().cpu().tolist()

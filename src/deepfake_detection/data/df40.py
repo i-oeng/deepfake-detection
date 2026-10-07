@@ -460,6 +460,103 @@ def partition_df40_unseen(catalog_path: Path, output: Path, *, seed: str) -> dic
     }
 
 
+SYNTHESIS = "entire_face_synthesis"
+# FOMM is published only in DF40's training archive, so it has no held-out videos.
+HELDOUT_METHODS = (
+    "simswap", "blendface", "wav2lip", "sadtalker", "stylegan2", "sd21", "dit", "starganv2",
+)
+
+
+def _heldout_entities(domain: str, video_id: str) -> tuple[str, ...]:
+    # CelebA images are single frames; each image is its own lineage unit.
+    if domain == "celeba":
+        return (f"celeba:{video_id.removeprefix('celeba:')}",)
+    return _source_entities(domain, video_id)
+
+
+def partition_df40_heldout(
+    catalog_path: Path,
+    reference_manifest: Path,
+    output: Path,
+    *,
+    downloads_root: Path | None = None,
+    exclude_videos: frozenset[str] = frozenset(),
+) -> dict[str, Any]:
+    """Collect evaluation-archive videos whose sources never reach frozen train or validation.
+
+    Every row is assigned to ``test``. The frame sampler later chooses videos and
+    frames from this pool, so this step only decides eligibility. ``exclude_videos``
+    removes video IDs that a previous content audit found colliding with the
+    reference, so the sampler can choose replacements.
+    """
+    owned: set[str] = set()
+    owned_images: set[tuple[str, str]] = set()
+    with reference_manifest.open(newline="", encoding="utf-8") as stream:
+        for row in csv.DictReader(stream):
+            if row["split"] in {"train", "validation"}:
+                owned.update(_source_entities(row["source_domain"], row["video_id"]))
+                owned.update(part for part in row["lineage_video_ids"].split("|") if part)
+                if row["manipulation_family"] == SYNTHESIS:
+                    owned_images.add((row["fake_method"], row["frame_index"]))
+    with catalog_path.open(newline="", encoding="utf-8") as stream:
+        reader = csv.DictReader(stream)
+        if not set(COLUMNS).issubset(reader.fieldnames or ()):
+            raise ValueError("extended catalog lacks DF40 lineage columns")
+        source = list(reader)
+    rows: dict[str, dict[str, str]] = {}
+    excluded: Counter[str] = Counter()
+    for row in source:
+        if row["label"] == "FAKE":
+            # The authors' training pool stays unused, as in the frozen protocol.
+            if row["fake_method"] not in HELDOUT_METHODS or row["split"] == "train":
+                continue
+        elif row["label"] != "REAL":
+            continue
+        entities = _heldout_entities(row["source_domain"], row["video_id"])
+        if not entities or owned.intersection(entities):
+            excluded[row["source_domain"]] += 1
+            continue
+        # Synthesis folders mimic source videos, but the archives reuse each
+        # generated image, numbered by frame index, under different folders.
+        if (row["fake_method"], row["frame_index"]) in owned_images:
+            excluded["synthesis_image"] += 1
+            continue
+        if row["video_id"] in exclude_videos:
+            excluded["content_collision"] += 1
+            continue
+        portable = _portable_row(row, "test", entities)
+        # Real frames are listed once per method catalog; keep one copy.
+        rows.setdefault(portable["relative_path"], portable)
+    empty: set[str] = set()
+    if downloads_root is not None:
+        from .materialize import find_empty_members
+
+        empty = find_empty_members(list(rows.values()), downloads_root)
+    ordered = sorted(
+        (row for path, row in rows.items() if path not in empty),
+        key=lambda row: row["relative_path"],
+    )
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with output.open("w", newline="", encoding="utf-8") as stream:
+        writer = csv.DictWriter(stream, fieldnames=COLUMNS, lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(ordered)
+    videos = Counter(
+        (row["source_domain"], row["fake_method"] or "real")
+        for row in {(r["source_domain"], r["fake_method"], r["video_id"]): r
+                    for r in ordered}.values()
+    )
+    return {
+        "catalog": str(output),
+        "rows": len(ordered),
+        "sha256": hashlib.sha256(output.read_bytes()).hexdigest(),
+        "reference_entities": len(owned),
+        "excluded_rows_by_domain": dict(sorted(excluded.items())),
+        "empty_archive_members": sorted(empty),
+        "eligible_videos": {"/".join(key): value for key, value in sorted(videos.items())},
+    }
+
+
 def extend_df40_from_archives(
     catalog_path: Path, downloads_root: Path, output: Path, *, eval_split_seed: str
 ) -> dict[str, Any]:
