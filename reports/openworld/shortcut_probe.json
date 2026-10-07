@@ -1,0 +1,132 @@
+{
+  "test/cdf": {
+    "fake": 4200,
+    "high_frequency_ratio": 0.6633,
+    "images": 7651,
+    "jpeg75_bytes": 0.5871,
+    "laplacian_variance": 0.5431,
+    "luma_std": 0.5651,
+    "max": 0.6633,
+    "saturation": 0.5138
+  },
+  "test/collabdiff": {
+    "fake": 1000,
+    "high_frequency_ratio": 0.6571,
+    "images": 2000,
+    "jpeg75_bytes": 0.5857,
+    "laplacian_variance": 0.5696,
+    "luma_std": 0.6427,
+    "max": 0.785,
+    "saturation": 0.785
+  },
+  "test/deepfacelab": {
+    "fake": 793,
+    "high_frequency_ratio": 0.5656,
+    "images": 1185,
+    "jpeg75_bytes": 0.6386,
+    "laplacian_variance": 0.6189,
+    "luma_std": 0.5085,
+    "max": 0.6386,
+    "saturation": 0.5175
+  },
+  "test/e4e": {
+    "fake": 680,
+    "high_frequency_ratio": 0.721,
+    "images": 1360,
+    "jpeg75_bytes": 0.6034,
+    "laplacian_variance": 0.5131,
+    "luma_std": 0.5591,
+    "max": 0.721,
+    "saturation": 0.5442
+  },
+  "test/ff": {
+    "fake": 1763,
+    "high_frequency_ratio": 0.5583,
+    "images": 2443,
+    "jpeg75_bytes": 0.65,
+    "laplacian_variance": 0.513,
+    "luma_std": 0.508,
+    "max": 0.65,
+    "saturation": 0.5342
+  },
+  "test/heygen": {
+    "fake": 408,
+    "high_frequency_ratio": 0.8468,
+    "images": 808,
+    "jpeg75_bytes": 0.5598,
+    "laplacian_variance": 0.6458,
+    "luma_std": 0.5954,
+    "max": 0.8468,
+    "saturation": 0.5675
+  },
+  "test/midjourney": {
+    "fake": 877,
+    "high_frequency_ratio": 0.6428,
+    "images": 1877,
+    "jpeg75_bytes": 0.8158,
+    "laplacian_variance": 0.8597,
+    "luma_std": 0.5835,
+    "max": 0.8597,
+    "saturation": 0.6232
+  },
+  "test/starganv2": {
+    "fake": 999,
+    "high_frequency_ratio": 0.5411,
+    "images": 1999,
+    "jpeg75_bytes": 0.6084,
+    "laplacian_variance": 0.5292,
+    "luma_std": 0.5948,
+    "max": 0.6084,
+    "saturation": 0.5077
+  },
+  "validation/cdf": {
+    "fake": 764,
+    "high_frequency_ratio": 0.6033,
+    "images": 2012,
+    "jpeg75_bytes": 0.6065,
+    "laplacian_variance": 0.5061,
+    "luma_std": 0.5492,
+    "max": 0.6065,
+    "saturation": 0.5313
+  },
+  "validation/ff": {
+    "fake": 720,
+    "high_frequency_ratio": 0.5075,
+    "images": 1160,
+    "jpeg75_bytes": 0.5966,
+    "laplacian_variance": 0.5488,
+    "luma_std": 0.5915,
+    "max": 0.5966,
+    "saturation": 0.5531
+  },
+  "validation/stargan": {
+    "fake": 999,
+    "high_frequency_ratio": 0.5031,
+    "images": 1999,
+    "jpeg75_bytes": 0.501,
+    "laplacian_variance": 0.5109,
+    "luma_std": 0.5319,
+    "max": 0.5319,
+    "saturation": 0.525
+  },
+  "validation/styleclip": {
+    "fake": 1000,
+    "high_frequency_ratio": 0.6316,
+    "images": 1991,
+    "jpeg75_bytes": 0.6877,
+    "laplacian_variance": 0.5913,
+    "luma_std": 0.6019,
+    "max": 0.6877,
+    "saturation": 0.5613
+  },
+  "validation/whichfaceisreal": {
+    "fake": 1000,
+    "high_frequency_ratio": 0.564,
+    "images": 2000,
+    "jpeg75_bytes": 0.6226,
+    "laplacian_variance": 0.6289,
+    "luma_std": 0.6023,
+    "max": 0.6289,
+    "saturation": 0.5299
+  }
+}
