@@ -99,6 +99,9 @@ FF_CLIPS = re.compile(r"^(\d{3})(?:_(\d{3}))?(?=_|$)")
 FF_SOURCE_FRAME = re.compile(r"^(\d{3})_\d+$")
 COLUMNS = (*DF40_COLUMNS, "role", "archive", "member", "preprocess")
 CANONICAL_ID = "yunet-det320-arcface5-scale1.3-256-scalematch-jpeg90-v2"
+# v3 applies the minimum face size at the source resolution rather than the 320 px
+# detection scale; v1 (manifest adf10611e74ccef2191d) was built with v2.
+CANONICAL_ID_ORIGINAL_SIZE = "yunet-det320-origsize-arcface5-scale1.3-256-scalematch-jpeg90-v3"
 DETECTION_SIDE = 320
 JPEG_QUALITY = 90
 
@@ -508,7 +511,7 @@ def _decode(data: bytes):
         return np.asarray(image.convert("RGB"))
 
 
-def _detect(job: tuple[str, str, str]) -> dict:
+def _detect(job: tuple[str, str, str, bool]) -> dict:
     from deepfake_detection.inference import face
 
     global _DETECTOR
@@ -518,7 +521,7 @@ def _detect(job: tuple[str, str, str]) -> dict:
         # One OpenCV thread per worker process; the pool supplies the parallelism.
         cv2.setNumThreads(1)
         _DETECTOR = face.FaceDetector()
-    downloads_root, archive, member = job
+    downloads_root, archive, member, size_at_original = job
     try:
         rgb = _decode(_read_member(downloads_root, archive, member))
     except (OSError, ValueError):
@@ -531,10 +534,23 @@ def _detect(job: tuple[str, str, str]) -> dict:
 
         size = (round(rgb.shape[1] * scale), round(rgb.shape[0] * scale))
         rgb = cv2.resize(rgb, size, interpolation=cv2.INTER_AREA)
-    result = face.extract_face(rgb, _DETECTOR)
-    if result.crop is None:
-        return {"reason": result.reason}
-    points = result.face.landmarks / scale
+    if size_at_original:
+        # The inference policy (largest confident face, minimum short side), with
+        # the size limit applied in source pixels so downscaling excludes nothing.
+        faces = _DETECTOR.detect(rgb)
+        confident = [found for found in faces if found.score >= face.MIN_SCORE]
+        if not faces:
+            return {"reason": "no_face"}
+        if not confident:
+            return {"reason": "low_confidence"}
+        if confident[0].short_side / scale < face.MIN_SHORT_SIDE:
+            return {"reason": "face_too_small"}
+        points = confident[0].landmarks / scale
+    else:
+        result = face.extract_face(rgb, _DETECTOR)
+        if result.crop is None:
+            return {"reason": result.reason}
+        points = result.face.landmarks / scale
     return {"reason": "", "landmarks": points.tolist(),
             "eyes": float(((points[0] - points[1]) ** 2).sum() ** 0.5)}
 
@@ -568,7 +584,7 @@ def _canonical(job: tuple[str, str, str, list, float, str]) -> int:
 
 
 def materialize(catalog: Path, downloads_root: Path, data_root: Path, output: Path, *,
-                workers: int = 8) -> dict:
+                workers: int = 8, size_at_original: bool = False) -> dict:
     """Write every catalog image under ``data_root`` and the surviving rows to ``output``.
 
     DF40 crops are copied byte for byte. External collections are canonicalized
@@ -621,7 +637,8 @@ def materialize(catalog: Path, downloads_root: Path, data_root: Path, output: Pa
                 copied += 1
 
     canonical = [row for row in rows if row["preprocess"] != "copy"]
-    jobs = [(str(downloads_root), row["archive"], row["member"]) for row in canonical]
+    jobs = [(str(downloads_root), row["archive"], row["member"], size_at_original)
+            for row in canonical]
     with ProcessPoolExecutor(workers) as pool:
         detections = list(pool.map(_detect, jobs, chunksize=16))
     collections: dict[str, dict[str, list[float]]] = defaultdict(lambda: defaultdict(list))
@@ -660,7 +677,7 @@ def materialize(catalog: Path, downloads_root: Path, data_root: Path, output: Pa
         "copied": copied,
         "reused": reused,
         "canonicalized": len(canonical_jobs),
-        "canonical_id": CANONICAL_ID,
+        "canonical_id": CANONICAL_ID_ORIGINAL_SIZE if size_at_original else CANONICAL_ID,
         "target_eye_distance": {name: round(value, 2) for name, value in targets.items()},
         "selected_canonical": dict(sorted(selected.items())),
         "excluded": dict(sorted(excluded.items())),
@@ -725,6 +742,8 @@ def main(argv: list[str] | None = None) -> int:
     build.add_argument("--data-root", type=Path, required=True)
     build.add_argument("--output", type=Path, required=True)
     build.add_argument("--workers", type=int, default=8)
+    build.add_argument("--size-at-original-resolution", action="store_true",
+                       help="apply the minimum face size in source pixels (fresh v2)")
     deduplicate = commands.add_parser("prune")
     deduplicate.add_argument("--catalog", type=Path, required=True)
     deduplicate.add_argument("--manifest-dir", type=Path, required=True)
@@ -736,7 +755,8 @@ def main(argv: list[str] | None = None) -> int:
         result = build_catalog(args.downloads_root, args.output, seed=args.seed)
     else:
         result = materialize(args.catalog, args.downloads_root, args.data_root, args.output,
-                             workers=args.workers)
+                             workers=args.workers,
+                             size_at_original=args.size_at_original_resolution)
     print(json.dumps(result, indent=2))
     return 0
 

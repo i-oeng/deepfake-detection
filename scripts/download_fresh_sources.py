@@ -25,7 +25,8 @@ DFF = ("OpenRL/DeepFakeFace", "eb2a54fbf2567790bd3dc61d09fdaade6bb6c31c",
 SFHQ = ("bitmind/SyntheticFacesHighQuality-T2I", "c7f422bdcaf4ffe1ced6da49198845c874221a03",
         ("small-sample.zip",))
 FFHQ = ("gaunernst/ffhq-1024-wds", "d74f1f1f59e3bbe975bee29872b9bef827314577",
-        ("00000.tar", "35000.tar"))
+        # whichfaceisreal (v1 validation) uses FFHQ 00000-01001; avoid that range.
+        ("35000.tar", "50000.tar"))
 IMAGE_SUFFIXES = (".png", ".jpg", ".jpeg", ".webp")
 
 
