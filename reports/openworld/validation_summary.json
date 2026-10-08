@@ -1,0 +1,368 @@
+{
+  "baseline": "release",
+  "candidates": [
+    "seed07",
+    "seed08",
+    "seed09"
+  ],
+  "domains": {
+    "cdf": {
+      "baseline_auroc": 0.8663888888888888,
+      "bootstrap": {
+        "seed07": {
+          "ci95": [
+            0.06301899335232675,
+            0.16348418817745003
+          ],
+          "clear_improvement": true,
+          "difference": 0.10887729972475746,
+          "source_groups": 131,
+          "valid_replicates": 1735
+        },
+        "seed08": {
+          "ci95": [
+            0.061379243935016925,
+            0.16141514591951467
+          ],
+          "clear_improvement": true,
+          "difference": 0.10709456033608589,
+          "source_groups": 131,
+          "valid_replicates": 1735
+        },
+        "seed09": {
+          "ci95": [
+            0.06019084369064176,
+            0.16135378679773793
+          ],
+          "clear_improvement": true,
+          "difference": 0.10594741416775322,
+          "source_groups": 131,
+          "valid_replicates": 1735
+        }
+      },
+      "by_method": {
+        "danet": {
+          "baseline": 0.8768696581196581,
+          "seed07": 0.9286858974358975,
+          "seed08": 0.9201388888888888,
+          "seed09": 0.9185363247863247
+        },
+        "facedancer": {
+          "baseline": 0.936698717948718,
+          "seed07": 0.9962606837606838,
+          "seed08": 0.9957264957264957,
+          "seed09": 0.9951923076923077
+        },
+        "mraa": {
+          "baseline": 0.8199786324786325,
+          "seed07": 0.9805021367521367,
+          "seed08": 0.9802350427350427,
+          "seed09": 0.9778311965811965
+        },
+        "sit": {
+          "baseline": 0.7307692307692307,
+          "seed07": 0.9708822251195133,
+          "seed08": 0.9713168187744459,
+          "seed09": 0.9701216862233811
+        },
+        "stylegan3": {
+          "baseline": 0.9676282051282051,
+          "seed07": 1.0,
+          "seed08": 1.0,
+          "seed09": 1.0
+        }
+      },
+      "candidate_auroc": {
+        "seed07": 0.9752661886136462,
+        "seed08": 0.9734834492249747,
+        "seed09": 0.972336303056642
+      },
+      "candidate_spread": {
+        "max": 0.9752661886136462,
+        "mean": 0.9736953136317542,
+        "min": 0.972336303056642,
+        "sd": 0.0014763882414292584
+      }
+    },
+    "ff": {
+      "baseline_auroc": 0.9859393939393939,
+      "bootstrap": {
+        "seed07": {
+          "ci95": [
+            -0.0058382506074279306,
+            0.019116757410768237
+          ],
+          "clear_improvement": false,
+          "difference": 0.005090909090909146,
+          "source_groups": 165,
+          "valid_replicates": 2000
+        },
+        "seed08": {
+          "ci95": [
+            -0.005714285714285783,
+            0.01996940559440552
+          ],
+          "clear_improvement": false,
+          "difference": 0.005393939393939506,
+          "source_groups": 165,
+          "valid_replicates": 2000
+        },
+        "seed09": {
+          "ci95": [
+            -0.006846414455110028,
+            0.021185897435897494
+          ],
+          "clear_improvement": false,
+          "difference": 0.005272727272727318,
+          "source_groups": 165,
+          "valid_replicates": 2000
+        }
+      },
+      "by_method": {
+        "danet": {
+          "baseline": 0.9936363636363637,
+          "seed07": 0.9954545454545455,
+          "seed08": 0.9927272727272727,
+          "seed09": 0.99
+        },
+        "facedancer": {
+          "baseline": 0.9427272727272727,
+          "seed07": 0.9645454545454546,
+          "seed08": 0.97,
+          "seed09": 0.9718181818181818
+        },
+        "mraa": {
+          "baseline": 0.9981818181818182,
+          "seed07": 0.9981818181818182,
+          "seed08": 0.9972727272727273,
+          "seed09": 0.9972727272727273
+        },
+        "sit": {
+          "baseline": 0.9951515151515151,
+          "seed07": 0.996969696969697,
+          "seed08": 0.9966666666666667,
+          "seed09": 0.996969696969697
+        },
+        "stylegan3": {
+          "baseline": 1.0,
+          "seed07": 1.0,
+          "seed08": 1.0,
+          "seed09": 1.0
+        }
+      },
+      "candidate_auroc": {
+        "seed07": 0.991030303030303,
+        "seed08": 0.9913333333333334,
+        "seed09": 0.9912121212121212
+      },
+      "candidate_spread": {
+        "max": 0.9913333333333334,
+        "mean": 0.9911919191919192,
+        "min": 0.991030303030303,
+        "sd": 0.00015252190778327344
+      }
+    },
+    "stargan": {
+      "baseline_auroc": 0.8736961961961962,
+      "bootstrap": {
+        "seed07": {
+          "ci95": [
+            0.09581746727688423,
+            0.1242020482847167
+          ],
+          "clear_improvement": true,
+          "difference": 0.10991041041041039,
+          "source_groups": 1999,
+          "valid_replicates": 2000
+        },
+        "seed08": {
+          "ci95": [
+            0.0976091844832977,
+            0.12635116185897444
+          ],
+          "clear_improvement": true,
+          "difference": 0.11183883883883883,
+          "source_groups": 1999,
+          "valid_replicates": 2000
+        },
+        "seed09": {
+          "ci95": [
+            0.0944687770988667,
+            0.123128493745295
+          ],
+          "clear_improvement": true,
+          "difference": 0.10860360360360355,
+          "source_groups": 1999,
+          "valid_replicates": 2000
+        }
+      },
+      "by_method": {
+        "stargan": {
+          "baseline": 0.8736961961961962,
+          "seed07": 0.9836066066066066,
+          "seed08": 0.985535035035035,
+          "seed09": 0.9822997997997998
+        }
+      },
+      "candidate_auroc": {
+        "seed07": 0.9836066066066066,
+        "seed08": 0.985535035035035,
+        "seed09": 0.9822997997997998
+      },
+      "candidate_spread": {
+        "max": 0.985535035035035,
+        "mean": 0.9838138138138138,
+        "min": 0.9822997997997998,
+        "sd": 0.001627540437858895
+      }
+    },
+    "styleclip": {
+      "baseline_auroc": 0.8819838546922301,
+      "bootstrap": {
+        "seed07": {
+          "ci95": [
+            0.07668909846773231,
+            0.10343614407233093
+          ],
+          "clear_improvement": true,
+          "difference": 0.08983753784056514,
+          "source_groups": 1991,
+          "valid_replicates": 2000
+        },
+        "seed08": {
+          "ci95": [
+            0.07839199125937324,
+            0.10484137892062184
+          ],
+          "clear_improvement": true,
+          "difference": 0.09127850655903125,
+          "source_groups": 1991,
+          "valid_replicates": 2000
+        },
+        "seed09": {
+          "ci95": [
+            0.07606148512971356,
+            0.10305896954652782
+          ],
+          "clear_improvement": true,
+          "difference": 0.08938294651866807,
+          "source_groups": 1991,
+          "valid_replicates": 2000
+        }
+      },
+      "by_method": {
+        "styleclip": {
+          "baseline": 0.8819838546922301,
+          "seed07": 0.9718213925327952,
+          "seed08": 0.9732623612512613,
+          "seed09": 0.9713668012108981
+        }
+      },
+      "candidate_auroc": {
+        "seed07": 0.9718213925327952,
+        "seed08": 0.9732623612512613,
+        "seed09": 0.9713668012108981
+      },
+      "candidate_spread": {
+        "max": 0.9732623612512613,
+        "mean": 0.9721501849983182,
+        "min": 0.9713668012108981,
+        "sd": 0.000989628885337295
+      }
+    },
+    "whichfaceisreal": {
+      "baseline_auroc": 0.7384725,
+      "bootstrap": {
+        "seed07": {
+          "ci95": [
+            0.13199100670496555,
+            0.16714497069573953
+          ],
+          "clear_improvement": true,
+          "difference": 0.1497575,
+          "source_groups": 2000,
+          "valid_replicates": 2000
+        },
+        "seed08": {
+          "ci95": [
+            0.1318869624611605,
+            0.16704421184189977
+          ],
+          "clear_improvement": true,
+          "difference": 0.1494375,
+          "source_groups": 2000,
+          "valid_replicates": 2000
+        },
+        "seed09": {
+          "ci95": [
+            0.12800433841653802,
+            0.16360638323410792
+          ],
+          "clear_improvement": true,
+          "difference": 0.14560000000000006,
+          "source_groups": 2000,
+          "valid_replicates": 2000
+        }
+      },
+      "by_method": {
+        "whichfaceisreal": {
+          "baseline": 0.7384725,
+          "seed07": 0.88823,
+          "seed08": 0.88791,
+          "seed09": 0.8840725
+        }
+      },
+      "candidate_auroc": {
+        "seed07": 0.88823,
+        "seed08": 0.88791,
+        "seed09": 0.8840725
+      },
+      "candidate_spread": {
+        "max": 0.88823,
+        "mean": 0.8867375000000001,
+        "min": 0.8840725,
+        "sd": 0.002313497082340891
+      }
+    }
+  },
+  "family_mean_auroc": {
+    "baseline": {
+      "entire_face_synthesis": 0.8864042902097902,
+      "face_edit": 0.8778400254442131,
+      "face_reenactment": 0.9221666181041182,
+      "face_swap": 0.9397129953379953
+    },
+    "seed07": {
+      "entire_face_synthesis": 0.971216384417842,
+      "face_edit": 0.9777139995697008,
+      "face_reenactment": 0.9757060994560994,
+      "face_swap": 0.9804030691530692
+    },
+    "seed08": {
+      "entire_face_synthesis": 0.9711786970882225,
+      "face_edit": 0.9793986981431482,
+      "face_reenactment": 0.9725934829059829,
+      "face_swap": 0.9828632478632479
+    },
+    "seed09": {
+      "entire_face_synthesis": 0.9702327766386156,
+      "face_edit": 0.9768333005053489,
+      "face_reenactment": 0.9709100621600621,
+      "face_swap": 0.9835052447552448
+    }
+  },
+  "score": {
+    "baseline": 0.8692961667433418,
+    "candidate_spread": {
+      "max": 0.9623048357689209,
+      "mean": 0.9615177463271611,
+      "min": 0.9602575050558922,
+      "sd": 0.0011026310590825383
+    },
+    "candidates": {
+      "seed07": 0.9619908981566703,
+      "seed08": 0.9623048357689209,
+      "seed09": 0.9602575050558922
+    }
+  }
+}
