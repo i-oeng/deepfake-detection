@@ -8,7 +8,8 @@ v1's test split was scored once and is spent. This set measures later changes:
   used for validation are left out, so model selection never saw those people.
 - ``dff``: DeepFakeFace Stable Diffusion 1.5 text-to-image, Stable Diffusion
   inpainting, and InsightFace swaps, against the IMDB-WIKI photos they derive from.
-- ``sfhq_t2i``: curated FLUX.1 and SDXL faces (SFHQ-T2I sample) against FFHQ.
+- ``sfhq_t2i``: curated FLUX.1 and SDXL faces (SFHQ-T2I sample) against two FFHQ
+  shards.
 
 Every row is a ``test`` row. Rows whose content matches any v1 image are dropped.
 """
@@ -161,7 +162,8 @@ def _sfhq_rows(downloads_root: Path) -> list[dict[str, str]]:
             identity=f"sfhq-{stem}",
         ))
     folder = downloads_root / FFHQ_FOLDER.removeprefix("dir:")
-    for path in sorted(folder.rglob("*.png")):
+    for path in sorted(path for path in folder.rglob("*")
+                       if path.suffix.lower() in (".png", ".jpg", ".jpeg", ".webp")):
         member = path.relative_to(folder).as_posix()
         rows.append(_row(
             domain="sfhq_t2i", method="", family=EFS, split=SPLIT, video=f"real-{path.stem}",

@@ -6,7 +6,7 @@ training, validation, or test splits:
 - DeepFakeFace (OpenRL): Stable Diffusion 1.5 text-to-image, Stable Diffusion
   inpainting, and InsightFace swaps, with the IMDB-WIKI photos they derive from.
 - Synthetic Faces High Quality T2I (bitmind), curated sample: FLUX.1 and SDXL faces.
-- FFHQ (marcosv mirror): a hash-ranked sample of real portraits for the T2I faces.
+- FFHQ (WebDataset mirror): two 1,000-image shards of real portraits for the T2I faces.
 
 Celeb-DF v2 raw videos, the fourth source, are already on disk.
 """
@@ -14,10 +14,9 @@ Celeb-DF v2 raw videos, the fourth source, are already on disk.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
-from concurrent.futures import ThreadPoolExecutor
-from pathlib import Path
+import tarfile
+from pathlib import Path, PurePosixPath
 
 from huggingface_hub import hf_hub_download
 
@@ -25,17 +24,25 @@ DFF = ("OpenRL/DeepFakeFace", "eb2a54fbf2567790bd3dc61d09fdaade6bb6c31c",
        ("wiki.zip", "text2img.zip", "inpainting.zip", "insight.zip"))
 SFHQ = ("bitmind/SyntheticFacesHighQuality-T2I", "c7f422bdcaf4ffe1ced6da49198845c874221a03",
         ("small-sample.zip",))
-FFHQ = ("marcosv/ffhq-dataset", "505f94e2ecc6db64e967e8e6c8e2c2079ea0876b")
-FFHQ_IMAGES = 70_000
-FFHQ_SAMPLE = 1500
-SEED = "fresh-test-v2-20261008"
+FFHQ = ("gaunernst/ffhq-1024-wds", "d74f1f1f59e3bbe975bee29872b9bef827314577",
+        ("00000.tar", "35000.tar"))
+IMAGE_SUFFIXES = (".png", ".jpg", ".jpeg", ".webp")
 
 
-def ffhq_sample() -> list[str]:
-    """Hash-ranked FFHQ file names; the mirror stores 10,000 images per Part folder."""
-    ranked = sorted(range(FFHQ_IMAGES),
-                    key=lambda i: hashlib.sha256(f"{SEED}\0{i}".encode()).hexdigest())
-    return [f"Part{i // 10_000 + 1}/{i:05d}.png" for i in sorted(ranked[:FFHQ_SAMPLE])]
+def extract_shard(path: Path, output: Path) -> int:
+    """Write each shard image as ``<shard>/<key>.<ext>``; skip non-image entries."""
+    count = 0
+    with tarfile.open(path) as shard:
+        for member in shard.getmembers():
+            name = PurePosixPath(member.name).name
+            if not member.isfile() or not name.lower().endswith(IMAGE_SUFFIXES):
+                continue
+            target = output / path.stem / name
+            if not target.exists():
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(shard.extractfile(member).read())
+            count += 1
+    return count
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -49,15 +56,13 @@ def main(argv: list[str] | None = None) -> int:
                                    local_dir=args.output / repository.split("/")[1])
             manifest[f"{repository}/{name}"] = {"revision": revision, "path": path}
             print(path, flush=True)
-    repository, revision = FFHQ
-    # One request per file: download in parallel; existing files are skipped.
-    with ThreadPoolExecutor(16) as pool:
-        list(pool.map(lambda name: hf_hub_download(repository, name, repo_type="dataset",
-                                                   revision=revision,
-                                                   local_dir=args.output / "ffhq"),
-                      ffhq_sample()))
-    manifest[f"{repository}/sample"] = {"revision": revision, "files": FFHQ_SAMPLE,
-                                         "seed": SEED}
+    repository, revision, shards = FFHQ
+    for name in shards:
+        path = hf_hub_download(repository, name, repo_type="dataset", revision=revision,
+                               local_dir=args.output / "ffhq_shards")
+        images = extract_shard(Path(path), args.output / "ffhq")
+        manifest[f"{repository}/{name}"] = {"revision": revision, "images": images}
+        print(path, images, flush=True)
     (args.output / "sources.json").write_text(json.dumps(manifest, indent=2, sort_keys=True)
                                               + "\n")
     print("done", flush=True)
