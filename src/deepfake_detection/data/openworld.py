@@ -477,7 +477,18 @@ def _e4e_rows(downloads_root: Path, ff_real: dict, ownership: Ownership,
 _DETECTOR = None
 
 
+def _directory_member(downloads_root: str | Path, archive: str, member: str) -> Path:
+    """Resolve ``member`` inside a ``dir:<folder>`` source, which holds plain files."""
+    folder = (Path(downloads_root) / archive.removeprefix("dir:")).resolve()
+    path = (folder / member).resolve()
+    if not path.is_relative_to(folder):
+        raise ValueError(f"member escapes its source folder: {member}")
+    return path
+
+
 def _read_member(downloads_root: str, archive: str, member: str) -> bytes:
+    if archive.startswith("dir:"):
+        return _directory_member(downloads_root, archive, member).read_bytes()
     path = Path(downloads_root) / archive
     try:
         with ZipFile(path) as stream:
@@ -561,8 +572,9 @@ def materialize(catalog: Path, downloads_root: Path, data_root: Path, output: Pa
     """Write every catalog image under ``data_root`` and the surviving rows to ``output``.
 
     DF40 crops are copied byte for byte. External collections are canonicalized
-    per collection: the target eye distance is the smaller of the real and fake
-    medians, so neither class keeps a resolution advantage.
+    per collection: the target eye distance is the smallest median among its real
+    images and each fake method, so no class keeps a resolution advantage.
+    Sources named ``dir:<folder>`` hold plain files instead of a ZIP archive.
     """
     with catalog.open(newline="", encoding="utf-8") as stream:
         rows = list(csv.DictReader(stream))
@@ -581,6 +593,21 @@ def materialize(catalog: Path, downloads_root: Path, data_root: Path, output: Pa
         if row["preprocess"] == "copy":
             by_archive[row["archive"]].append(row)
     for archive, items in sorted(by_archive.items()):
+        if archive.startswith("dir:"):
+            for row in items:
+                source = _directory_member(downloads_root, archive, row["member"])
+                target = destination(row)
+                if target.exists():
+                    if target.read_bytes() != source.read_bytes():
+                        raise RuntimeError(f"refusing to overwrite changed image: {target}")
+                    reused += 1
+                    continue
+                target.parent.mkdir(parents=True, exist_ok=True)
+                temporary = target.with_suffix(".part")
+                temporary.write_bytes(source.read_bytes())
+                temporary.replace(target)
+                copied += 1
+            continue
         with ZipFile(downloads_root / archive) as stream:
             for row in items:
                 member = stream.getinfo(row["member"])
@@ -600,11 +627,11 @@ def materialize(catalog: Path, downloads_root: Path, data_root: Path, output: Pa
     collections: dict[str, dict[str, list[float]]] = defaultdict(lambda: defaultdict(list))
     for row, found in zip(canonical, detections, strict=True):
         if not found["reason"]:
-            collections[row["preprocess"]][row["label"]].append(found["eyes"])
+            collections[row["preprocess"]][row["fake_method"] or "real"].append(found["eyes"])
     targets = {}
     for name, classes in collections.items():
-        if set(classes) != {"REAL", "FAKE"}:
-            raise ValueError(f"{name}: one class has no detected faces")
+        if "real" not in classes or len(classes) < 2:
+            raise ValueError(f"{name}: real or fake images have no detected faces")
         targets[name] = min(statistics.median(values) for values in classes.values())
     canonical_jobs = []
     excluded: Counter[str] = Counter()

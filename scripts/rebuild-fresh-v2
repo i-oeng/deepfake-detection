@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# Build the fresh open-world test set (v2): catalog, materialize, manifest, drop
+# v1 duplicates, final manifest, shortcut probe. Sources come from
+# scripts/download_fresh_sources.py; each step writes runtime/fresh_<n>_<step>.json.
+set -euo pipefail
+project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$project_root"
+export PYTHONPATH="$project_root/src"
+python="${PYTHON:-$HOME/deepfake-detection/.venv/bin/python}"
+subset=data/subsets/openworld_fresh_v2
+reference=data/manifests/df40_openworld_v1/adf10611e74ccef2191d
+mkdir -p runtime "$subset"
+
+"$python" -m deepfake_detection.data.fresh catalog \
+  --downloads-root data/raw/fresh_v2 --celebdf-root data/raw/celeb_df_v2 \
+  --reference-manifest "$reference/manifest.csv" \
+  --output "$subset/catalog_selected.csv" --seed 20261008 > runtime/fresh_1_catalog.json
+"$python" -m deepfake_detection.data.openworld materialize \
+  --catalog "$subset/catalog_selected.csv" --downloads-root data/raw/fresh_v2 \
+  --data-root data/raw/fresh_v2_images --output "$subset/catalog_materialized.csv" \
+  --workers 12 > runtime/fresh_2_materialize.json
+# The dataset config reads catalog.csv: first all rows, then rows without v1 matches.
+cp "$subset/catalog_materialized.csv" "$subset/catalog.csv"
+"$python" -m deepfake_detection.data.cli build \
+  --config configs/datasets/openworld_fresh_v2.yaml > runtime/fresh_3_manifest_unfiltered.json
+unfiltered="$("$python" -c \
+  "import json; print(json.load(open('runtime/fresh_3_manifest_unfiltered.json'))['manifest'])")"
+"$python" -m deepfake_detection.data.fresh drop-reference-matches \
+  --catalog "$subset/catalog_materialized.csv" --manifest-dir "$(dirname "$unfiltered")" \
+  --reference-dir "$reference" --output "$subset/catalog.csv" > runtime/fresh_4_dedup.json
+"$python" -m deepfake_detection.data.cli build \
+  --config configs/datasets/openworld_fresh_v2.yaml > runtime/fresh_5_manifest.json
+final="$("$python" -c \
+  "import json; print(json.load(open('runtime/fresh_5_manifest.json'))['manifest'])")"
+"$python" scripts/shortcut_probe.py --manifest "$final" --data-root data/raw/fresh_v2_images \
+  --splits test --output reports/openworld/fresh_v2_shortcut_probe.json --workers 12
+echo "fresh v2 test set rebuilt"

@@ -31,7 +31,13 @@ from deepfake_detection.data.openworld import method_roles
 from deepfake_detection.data.unseen import audit_unseen_manifest
 
 from . import benchmark, corruptions
-from .common import git_commit, load_manifest_rows, sampling_weights, sha256_file
+from .common import (
+    git_commit,
+    load_manifest_rows,
+    read_manifest_rows,
+    sampling_weights,
+    sha256_file,
+)
 from .evaluation import report as domain_report
 from .loop import _seed_worker
 from .sbi import self_blend
@@ -430,6 +436,36 @@ def score_run(run_dir: Path, protocol_config: Path, split: str, output: Path) ->
             "domains": result[split]["domain_macro_auroc"]}
 
 
+def score_manifest(run_dir: Path, evaluation_config: Path, output: Path) -> dict:
+    """Score a selected checkpoint on every row of a test-only manifest, once."""
+    root = find_project_root(evaluation_config.resolve().parent)
+    evaluation = dict(yaml.safe_load(evaluation_config.read_text(encoding="utf-8"))["evaluation"])
+    manifest_dir = (root / str(evaluation["manifest_dir"])).resolve()
+    rows, manifest_path = read_manifest_rows(manifest_dir, root / str(evaluation["data_root"]))
+    if manifest_dir.name != str(evaluation["manifest_id"]) or sha256_file(
+        manifest_path
+    ) != str(evaluation["manifest_sha256"]):
+        raise ValueError("configured manifest ID or SHA-256 differs from the artifact")
+    if {row["split"] for row in rows} != {"test"}:
+        raise ValueError("score-manifest expects a test-only manifest")
+    device = _device(evaluation)
+    model, config, report = _model_from_run(run_dir.resolve(), device)
+    if config.get("protocol") != PROTOCOL and config["model"] != "clip_vit_b16":
+        raise ValueError("frozen-protocol baselines are scored with CLIP preprocessing only")
+    output.mkdir(parents=True, exist_ok=True)
+    records = predict(model, rows, evaluation, device)
+    _write_jsonl(output / "test.jsonl", records)
+    result = {
+        "evaluation": evaluation["name"], "run_dir": str(run_dir),
+        "checkpoint_sha256": report["checkpoint_sha256"],
+        "manifest_id": evaluation["manifest_id"], "test": open_world_report(records),
+    }
+    (output / "test_report.json").write_text(json.dumps(result, indent=2, sort_keys=True)
+                                             + "\n")
+    return {"output": str(output), "score": result["test"]["score"],
+            "domains": result["test"]["domain_macro_auroc"]}
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
@@ -441,9 +477,16 @@ def main(argv: list[str] | None = None) -> int:
     score.add_argument("--protocol-config", type=Path, required=True)
     score.add_argument("--split", choices=("validation", "test"), required=True)
     score.add_argument("--output", type=Path, required=True)
+    fresh = commands.add_parser("score-manifest",
+                                help="score a selected checkpoint on a test-only manifest")
+    fresh.add_argument("--run-dir", type=Path, required=True)
+    fresh.add_argument("--evaluation-config", type=Path, required=True)
+    fresh.add_argument("--output", type=Path, required=True)
     args = parser.parse_args(argv)
     if args.command == "train":
         result = train(args.config, seed=args.seed)
+    elif args.command == "score-manifest":
+        result = score_manifest(args.run_dir, args.evaluation_config, args.output)
     else:
         result = score_run(args.run_dir, args.protocol_config, args.split, args.output)
     print(json.dumps(result, indent=2))
