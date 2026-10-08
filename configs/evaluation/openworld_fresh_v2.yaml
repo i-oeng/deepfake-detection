@@ -1,0 +1,11 @@
+evaluation:
+  # Fresh test-only set (reports/openworld/fresh_v2_protocol.md). Score each
+  # finalist once with `deepfake_detection.train.openworld score-manifest`.
+  name: openworld_fresh_v2
+  manifest_dir: data/manifests/openworld_fresh_v2/b209f9bcef05d95af5c1
+  manifest_id: b209f9bcef05d95af5c1
+  manifest_sha256: b209f9bcef05d95af5c1c3df994cf52110efa099d6952ab50b52d9e1bf252492
+  data_root: data/raw/fresh_v2_images
+  require_cuda: true
+  batch_size: 32
+  workers: 8

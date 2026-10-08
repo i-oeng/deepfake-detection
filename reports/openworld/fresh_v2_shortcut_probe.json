@@ -1,0 +1,32 @@
+{
+  "test/celebdf_video": {
+    "fake": 9507,
+    "high_frequency_ratio": 0.5444,
+    "images": 21077,
+    "jpeg75_bytes": 0.5779,
+    "laplacian_variance": 0.5684,
+    "luma_std": 0.5772,
+    "max": 0.5779,
+    "saturation": 0.5184
+  },
+  "test/dff": {
+    "fake": 2470,
+    "high_frequency_ratio": 0.6811,
+    "images": 3178,
+    "jpeg75_bytes": 0.5789,
+    "laplacian_variance": 0.5722,
+    "luma_std": 0.6064,
+    "max": 0.6811,
+    "saturation": 0.5347
+  },
+  "test/sfhq_t2i": {
+    "fake": 1715,
+    "high_frequency_ratio": 0.5361,
+    "images": 3715,
+    "jpeg75_bytes": 0.563,
+    "laplacian_variance": 0.5677,
+    "luma_std": 0.6706,
+    "max": 0.6706,
+    "saturation": 0.577
+  }
+}
