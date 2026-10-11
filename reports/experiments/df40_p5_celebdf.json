@@ -1,0 +1,159 @@
+{
+  "bundles": {
+    "clip-20261006": {
+      "abstain_as_0.5": {
+        "all": {
+          "auroc": 0.750363516192994,
+          "average_precision": 0.8130019836536797,
+          "brier": 0.2720993594537515,
+          "ece_10": 0.28178757855936337,
+          "tpr_at_1pct_fpr": 0.011764705882352941
+        },
+        "identity_disjoint": {
+          "auroc": 0.7536594377966631,
+          "average_precision": 0.777398029212978,
+          "brier": 0.3116802085304918,
+          "ece_10": 0.3281721014155608,
+          "tpr_at_1pct_fpr": 0.012875536480686695
+        },
+        "scored_videos": 518
+      },
+      "abstentions": 1,
+      "accuracy_at_threshold": 0.6615087040618955,
+      "decisions": {
+        "ABSTAIN": 1,
+        "FAKE": 515,
+        "REAL": 2
+      },
+      "excluding_abstentions": {
+        "all": {
+          "auroc": 0.7489531405782652,
+          "average_precision": 0.8130019836536797,
+          "brier": 0.27214210482987095,
+          "ece_10": 0.28136550424323054,
+          "tpr_at_1pct_fpr": 0.011764705882352941
+        },
+        "identity_disjoint": {
+          "auroc": 0.7520171673819742,
+          "average_precision": 0.777398029212978,
+          "brier": 0.3118412534613808,
+          "ece_10": 0.3277234646046353,
+          "tpr_at_1pct_fpr": 0.012875536480686695
+        },
+        "scored_videos": 517
+      }
+    },
+    "convnext-20261006": {
+      "abstain_as_0.5": {
+        "all": {
+          "auroc": 0.6555188367481825,
+          "average_precision": 0.7570117300534115,
+          "brier": 0.28156902817831075,
+          "ece_10": 0.26762053845927136,
+          "tpr_at_1pct_fpr": 0.020588235294117647
+        },
+        "identity_disjoint": {
+          "auroc": 0.6354489384077537,
+          "average_precision": 0.6943523847150902,
+          "brier": 0.3289154491203332,
+          "ece_10": 0.3211080476987187,
+          "tpr_at_1pct_fpr": 0.008583690987124463
+        },
+        "scored_videos": 518
+      },
+      "abstentions": 1,
+      "accuracy_at_threshold": 0.6692456479690522,
+      "decisions": {
+        "ABSTAIN": 1,
+        "FAKE": 511,
+        "REAL": 6
+      },
+      "excluding_abstentions": {
+        "all": {
+          "auroc": 0.6537221668328348,
+          "average_precision": 0.7570466463717705,
+          "brier": 0.2816300901283655,
+          "ece_10": 0.26717106174449234,
+          "tpr_at_1pct_fpr": 0.020588235294117647
+        },
+        "identity_disjoint": {
+          "auroc": 0.6332474964234621,
+          "average_precision": 0.6944088351557482,
+          "brier": 0.3291214946793941,
+          "ece_10": 0.32064096688331073,
+          "tpr_at_1pct_fpr": 0.008583690987124463
+        },
+        "scored_videos": 517
+      }
+    },
+    "resnet18-20261006": {
+      "abstain_as_0.5": {
+        "all": {
+          "auroc": 0.6060310641110377,
+          "average_precision": 0.7546689170765045,
+          "brier": 0.2773023950068299,
+          "ece_10": 0.20370796339781802,
+          "tpr_at_1pct_fpr": 0.05588235294117647
+        },
+        "identity_disjoint": {
+          "auroc": 0.5799960208055026,
+          "average_precision": 0.697151002194356,
+          "brier": 0.2821121267447514,
+          "ece_10": 0.18200778763405773,
+          "tpr_at_1pct_fpr": 0.055793991416309016
+        },
+        "scored_videos": 518
+      },
+      "abstentions": 1,
+      "accuracy_at_threshold": 0.5454545454545454,
+      "decisions": {
+        "ABSTAIN": 1,
+        "FAKE": 201,
+        "REAL": 316
+      },
+      "excluding_abstentions": {
+        "all": {
+          "auroc": 0.6066301096709871,
+          "average_precision": 0.7556524256074338,
+          "brier": 0.2773552042815046,
+          "ece_10": 0.20506910065777514,
+          "tpr_at_1pct_fpr": 0.05588235294117647
+        },
+        "identity_disjoint": {
+          "auroc": 0.5805722460658083,
+          "average_precision": 0.6983779563002209,
+          "brier": 0.2821959704177142,
+          "ece_10": 0.1837884868184808,
+          "tpr_at_1pct_fpr": 0.055793991416309016
+        },
+        "scored_videos": 517
+      }
+    }
+  },
+  "development_identities": [
+    "cdf:id13",
+    "cdf:id19",
+    "cdf:id23",
+    "cdf:id28",
+    "cdf:id29",
+    "cdf:id32",
+    "cdf:id33",
+    "cdf:id36",
+    "cdf:id53",
+    "cdf:id54"
+  ],
+  "h2": {
+    "baseline": "convnext-20261006",
+    "candidate": "clip-20261006",
+    "ci95": [
+      -0.012669287898645742,
+      0.1314342999657685
+    ],
+    "clear_improvement": false,
+    "difference": 0.09523097374543044,
+    "source_groups": 75,
+    "valid_replicates": 1973
+  },
+  "identity_disjoint_videos": 384,
+  "videos": 518
+}

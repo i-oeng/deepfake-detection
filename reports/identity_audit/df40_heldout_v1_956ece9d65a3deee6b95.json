@@ -1,0 +1,37 @@
+{
+  "failures": [],
+  "manifest_id": "956ece9d65a3deee6b95",
+  "manifest_sha256": "956ece9d65a3deee6b953140994f5e7815bf79ad7611e1fcf6f02c2b0f8ff512",
+  "missing_identity_rows": 0,
+  "missing_parent_rows": 0,
+  "overlap": {
+    "dhash": [],
+    "identity": [],
+    "parent": [],
+    "pixel": [],
+    "video": []
+  },
+  "passed": true,
+  "reference_id": "07f906d9ef61a537efa8",
+  "reference_sha256": "07f906d9ef61a537efa81be8da1ba1a568bb8fc339380a2987ad8ac717e73dff",
+  "videos": {
+    "cdf/blendface": 10,
+    "cdf/dit": 10,
+    "cdf/real": 71,
+    "cdf/sadtalker": 10,
+    "cdf/sd21": 11,
+    "cdf/simswap": 10,
+    "cdf/stylegan2": 10,
+    "cdf/wav2lip": 10,
+    "celeba/real": 300,
+    "celeba/starganv2": 300,
+    "ff/blendface": 20,
+    "ff/dit": 20,
+    "ff/real": 140,
+    "ff/sadtalker": 20,
+    "ff/sd21": 20,
+    "ff/simswap": 20,
+    "ff/stylegan2": 20,
+    "ff/wav2lip": 20
+  }
+}

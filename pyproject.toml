@@ -24,6 +24,9 @@ notebook = [
   "jupyterlab>=4.0,<5.0",
   "matplotlib>=3.8,<4.0",
 ]
+inference = [
+  "opencv-python-headless>=4.10,<5.0",
+]
 train = [
   "torch>=2.12,<2.15",
   "torchvision>=0.27,<0.30",
@@ -36,6 +39,8 @@ deepfake-train-rgb = "deepfake_detection.train.rgb:main"
 deepfake-train-benchmark = "deepfake_detection.train.benchmark:main"
 deepfake-fuse = "deepfake_detection.train.fusion:main"
 deepfake-summarize-seeds = "deepfake_detection.train.summarize:main"
+deepfake-evaluate = "deepfake_detection.train.extended:main"
+deepfake-detect = "deepfake_detection.inference.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -1,0 +1,137 @@
+{
+  "models": {
+    "clip": {
+      "face_crop": {
+        "auroc": 0.7489531405782652,
+        "average_precision": 0.8130019836536797,
+        "brier": 0.1849858049273973,
+        "ece_10": 0.0758732002535087,
+        "tpr_at_1pct_fpr": 0.011764705882352941
+      },
+      "whole_letterboxed": {
+        "auroc": 0.6411432369557992,
+        "average_precision": 0.7413828138934319,
+        "brier": 0.3831461461137702,
+        "ece_10": 0.4116201297464788,
+        "tpr_at_1pct_fpr": 0.023529411764705882
+      },
+      "whole_stretched": {
+        "auroc": 0.6100864074443336,
+        "average_precision": 0.729796673696373,
+        "brier": 0.29759844141622316,
+        "ece_10": 0.26092786606296353,
+        "tpr_at_1pct_fpr": 0.026470588235294117
+      }
+    },
+    "convnext": {
+      "face_crop": {
+        "auroc": 0.6537221668328348,
+        "average_precision": 0.7570466463717705,
+        "brier": 0.2995014161519615,
+        "ece_10": 0.2939443884033038,
+        "tpr_at_1pct_fpr": 0.020588235294117647
+      },
+      "whole_letterboxed": {
+        "auroc": 0.5607510800930542,
+        "average_precision": 0.7081379326169952,
+        "brier": 0.3751874091065118,
+        "ece_10": 0.36062089214584697,
+        "tpr_at_1pct_fpr": 0.020588235294117647
+      },
+      "whole_stretched": {
+        "auroc": 0.5705716184778996,
+        "average_precision": 0.7077282978493139,
+        "brier": 0.40414985572162815,
+        "ece_10": 0.397796494210112,
+        "tpr_at_1pct_fpr": 0.014705882352941176
+      }
+    },
+    "resnet18": {
+      "face_crop": {
+        "auroc": 0.6066301096709871,
+        "average_precision": 0.7556524256074338,
+        "brier": 0.32385860359021235,
+        "ece_10": 0.26052529406236224,
+        "tpr_at_1pct_fpr": 0.05588235294117647
+      },
+      "whole_letterboxed": {
+        "auroc": 0.5540545031571951,
+        "average_precision": 0.7052366127351716,
+        "brier": 0.4818417643481539,
+        "ece_10": 0.47509385336987026,
+        "tpr_at_1pct_fpr": 0.014705882352941176
+      },
+      "whole_stretched": {
+        "auroc": 0.5807078763708874,
+        "average_precision": 0.7203262933769917,
+        "brier": 0.4463905679305303,
+        "ece_10": 0.43788163784780476,
+        "tpr_at_1pct_fpr": 0.011764705882352941
+      }
+    }
+  },
+  "paired": {
+    "clip: whole_letterboxed minus face_crop": {
+      "ci95": [
+        -0.1790603033666296,
+        -0.008939974457215838
+      ],
+      "clear_improvement": false,
+      "difference": -0.10780990362246601,
+      "source_groups": 75,
+      "valid_replicates": 1973
+    },
+    "clip: whole_stretched minus face_crop": {
+      "ci95": [
+        -0.17930802616296837,
+        -0.04037267080745344
+      ],
+      "clear_improvement": false,
+      "difference": -0.1388667331339316,
+      "source_groups": 75,
+      "valid_replicates": 1973
+    },
+    "convnext: whole_letterboxed minus face_crop": {
+      "ci95": [
+        -0.19239766081871346,
+        -0.01527614571092828
+      ],
+      "clear_improvement": false,
+      "difference": -0.0929710867397806,
+      "source_groups": 75,
+      "valid_replicates": 1973
+    },
+    "convnext: whole_stretched minus face_crop": {
+      "ci95": [
+        -0.1331274031191948,
+        -0.011904761904761862
+      ],
+      "clear_improvement": false,
+      "difference": -0.08315054835493518,
+      "source_groups": 75,
+      "valid_replicates": 1973
+    },
+    "resnet18: whole_letterboxed minus face_crop": {
+      "ci95": [
+        -0.18369565217391304,
+        -0.017734553775743733
+      ],
+      "clear_improvement": false,
+      "difference": -0.052575606513792006,
+      "source_groups": 75,
+      "valid_replicates": 1973
+    },
+    "resnet18: whole_stretched minus face_crop": {
+      "ci95": [
+        -0.1366487455197133,
+        0.010865788559335399
+      ],
+      "clear_improvement": false,
+      "difference": -0.025922233300099684,
+      "source_groups": 75,
+      "valid_replicates": 1973
+    }
+  },
+  "scored_videos": 517,
+  "videos": 518
+}

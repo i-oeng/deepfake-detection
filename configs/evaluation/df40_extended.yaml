@@ -1,0 +1,39 @@
+# Frozen checkpoints and pre-registered comparisons for
+# reports/experiments/df40_extended_evaluation_protocol.md (P1-P4).
+evaluation:
+  output_root: artifacts/evaluation
+  data_root: data/raw/df40
+  heldout_manifest: data/manifests/df40_heldout_v1/956ece9d65a3deee6b95
+  frozen_manifest: data/manifests/df40_unseen_clean_v3/07f906d9ef61a537efa8
+  runs:
+    - {name: resnet18-20261006, family: ResNet18, seed: 20261006,
+       run: artifacts/benchmark/resnet18-20261006-07f906d9ef61a537efa8-0dacb5a4-7ea7def8}
+    - {name: convnext-20261006, family: ConvNeXt-Tiny, seed: 20261006,
+       run: artifacts/benchmark/convnext_tiny-20261006-07f906d9ef61a537efa8-0dacb5a4-bff413c6}
+    - {name: convnext-20261007, family: ConvNeXt-Tiny, seed: 20261007,
+       run: artifacts/benchmark/convnext_tiny-20261007-07f906d9ef61a537efa8-8f3b95e2-ebe77a17}
+    - {name: convnext-20261008, family: ConvNeXt-Tiny, seed: 20261008,
+       run: artifacts/benchmark/convnext_tiny-20261008-07f906d9ef61a537efa8-8f3b95e2-ed25c62f}
+    - {name: clip-20261006, family: CLIP ViT-B/16, seed: 20261006,
+       run: artifacts/benchmark/clip_vit_b16-20261006-07f906d9ef61a537efa8-8f3b95e2-a77f7ac7}
+    - {name: clip-20261007, family: CLIP ViT-B/16, seed: 20261007,
+       run: artifacts/benchmark/clip_vit_b16-20261007-07f906d9ef61a537efa8-3e2bff7b-a7ace62c}
+    - {name: clip-20261008, family: CLIP ViT-B/16, seed: 20261008,
+       run: artifacts/benchmark/clip_vit_b16-20261008-07f906d9ef61a537efa8-3e2bff7b-744ba73a}
+    - {name: frequency-20261006, family: Frequency, seed: 20261006,
+       run: artifacts/benchmark/frequency_resnet18-20261006-07f906d9ef61a537efa8-5c83f529-c351a5ca}
+    - {name: frequency-20261007, family: Frequency, seed: 20261007,
+       run: artifacts/benchmark/frequency_resnet18-20261007-07f906d9ef61a537efa8-5c83f529-0b52c27e}
+    - {name: frequency-20261008, family: Frequency, seed: 20261008,
+       run: artifacts/benchmark/frequency_resnet18-20261008-07f906d9ef61a537efa8-5c83f529-7d69d84e}
+  comparisons:
+    - {name: H1 CLIP minus ConvNeXt on P2, domain: cdf,
+       baseline: convnext-20261006, candidate: clip-20261006}
+    - {name: H3 ConvNeXt 20261006 minus ResNet18 on P1, domain: ff,
+       baseline: resnet18-20261006, candidate: convnext-20261006}
+    - {name: H3 ConvNeXt 20261007 minus ResNet18 on P1, domain: ff,
+       baseline: resnet18-20261006, candidate: convnext-20261007}
+    - {name: H3 ConvNeXt 20261008 minus ResNet18 on P1, domain: ff,
+       baseline: resnet18-20261006, candidate: convnext-20261008}
+    - {name: H3 CLIP 20261006 minus ResNet18 on P1, domain: ff,
+       baseline: resnet18-20261006, candidate: clip-20261006}

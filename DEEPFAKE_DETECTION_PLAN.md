@@ -10,31 +10,32 @@ The planned detector has three experiment tracks:
 2. A frequency model that learns spectral and high-frequency evidence.
 3. A fused model that combines both signals.
 
-The repository implements the data-quality foundation and an exploratory RGB
-training baseline. Frequency modeling, fusion, and inference remain planned.
+All three tracks have frozen results, and a calibrated inference package
+exists. Section 2 records where each milestone stands; sections 4-10 remain the
+reference design.
 
-## 2. Current state
+## 2. Current state (2026-10-07)
 
-The repository already provides:
+| Milestone | Status | Evidence |
+|---|---|---|
+| M1 Dataset | Done | Frozen manifest `07f906d9ef61a537efa8`; [protocol](reports/experiments/df40_unseen_protocol.md) |
+| M2 Face preprocessing | Done for raw media | DF40 ships crops; `deepfake-detect crops` builds content-addressed crops from raw images and video with a pinned detector, and rebuilds are bit-identical. Crops agree with DF40's to a median 4.6 px |
+| M3 RGB baseline | Done | ResNet18, ConvNeXt-Tiny (3 seeds), CLIP ViT-B/16 (3 seeds); [RGB result](reports/experiments/df40_unseen_final_rgb.md) |
+| M4 Frequency branch | Done; exit criterion not met | Ablation picks all inputs + spectral filter, but the branch improves no protocol; [frequency result](reports/experiments/df40_unseen_frequency_final.md) |
+| M5 Fusion | Done; exit criterion not met | Tuned blends do not beat RGB alone (0/3 seeds per backbone). Fusion adds 1.3 ms and 11.3 M parameters per face |
+| M6 Evaluation | Done | Seen-method, Celeb-DF domain, CelebA face-editing, robustness, and raw Celeb-DF video protocols; [extended result](reports/experiments/df40_extended_evaluation.md) |
+| M7 Inference | Done | `deepfake-detect`, CLIP release bundle with development-fixed aggregation, calibration, and threshold; [model card](MODEL_CARD.md) |
 
-- deterministic DF40 pilot selection;
-- immutable, content-addressed manifests;
-- file, decoded-pixel, and perceptual hashes;
-- image path and decode validation;
-- cross-split duplicate and group-leakage checks;
-- metadata leakage warnings;
-- checksum verification;
-- CLI commands, tests, and CI checks.
+Main findings:
 
-The configured DF40 pilot selects 16,000 images when its strict quotas pass:
-
-| Split | Fake methods | Fake images | Real images | Total |
-|---|---:|---:|---:|---:|
-| Train | 4 seen methods | 6,000 | 6,000 | 12,000 |
-| Validation | Same 4 seen methods | 800 | 800 | 1,600 |
-| Test | 4 unseen methods | 1,200 | 1,200 | 2,400 |
-
-The sampler keeps up to ten frames per video or selection group and balances real images against selected fake images by source domain.
+- CLIP ViT-B/16 generalizes across domains best: Celeb-DF seen methods 0.80 vs
+  ConvNeXt 0.72 (pre-registered H1, interval above zero), CelebA face editing
+  0.81 vs 0.63, raw Celeb-DF video 0.75 vs 0.65.
+- ConvNeXt-Tiny is marginally best on FF++, where every model trained.
+- The frequency branch and RGB-frequency fusion add nothing measurable.
+- Lip-sync and talking-head methods on Celeb-DF stay near chance, and strong
+  H.264 compression (CRF 38) costs 0.19-0.36 AUROC.
+- The FF++-calibrated threshold does not transfer to raw Celeb-DF video.
 
 ## 3. Target pipeline
 
@@ -277,15 +278,17 @@ The inference package should:
 | M6 | Cross-dataset and robustness evaluation |
 | M7 | Video aggregation, calibrated inference, and model card |
 
-## 13. Immediate next steps
+## 13. Next steps
 
-1. Implement the DF40 normalization adapter.
-2. Run the sampler against the real catalog and inspect quota shortfalls.
-3. Fix independent identity and video split validation.
-4. Download or extract the selected pilot images.
-5. Produce the first passing immutable manifest.
-6. Implement versioned face preprocessing.
-7. Train the RGB baseline before starting frequency fusion work.
+1. Re-fit the decision threshold and calibration on labeled target-domain data
+   before using `FAKE` / `REAL` labels outside FF++-like footage.
+2. Add a temporal model for lip-sync and talking-head manipulation (Phase 7's
+   second release); frame models are near chance on these methods off-domain.
+3. Train with compression augmentation that includes H.264, and re-run P4.
+4. Collect a labeled whole-image set (real photos and current text-to-image
+   outputs) before claiming anything about fully generated images; DF40 covers
+   face crops only.
+5. Add demographic slice metrics once a dataset with reliable labels is available.
 
 ## References
 

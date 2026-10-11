@@ -1,0 +1,8 @@
+# Held-out videos excluded after `deepfake-data audit-heldout` found a perceptual
+# (dHash) collision with a frozen-manifest train image. Each line is a video ID,
+# then the colliding reference image. The partition drops the whole video and the
+# sampler chooses a replacement.
+celeba:1081      # starganv2 frame 1081 ~ train stylegan2 ff:784 frame 12212
+ff:527_454       # blendface frame 341 ~ train stylegan2 ff:532 frame 15344
+ff:953           # dit frame 4418 ~ train sadtalker ff:032_BoRUrWcdkQ4_50018_sadtalker frame 18
+ff:371           # dit frame 2430 ~ train real ff:835_blendface frame 0

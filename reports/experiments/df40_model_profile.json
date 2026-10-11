@@ -1,0 +1,70 @@
+{
+  "gpu": "NVIDIA GeForce RTX 5060",
+  "torch": "2.14.1+cu130",
+  "models": {
+    "ResNet18": {
+      "parameters": 11177025,
+      "latency": [
+        {
+          "batch": 1,
+          "median_ms": 0.9736220017657615,
+          "images_per_second": 1027.0926480568428
+        },
+        {
+          "batch": 32,
+          "median_ms": 6.999489000008907,
+          "images_per_second": 4571.762310071389
+        }
+      ],
+      "peak_memory_mib_batch32": 210.47509765625
+    },
+    "ConvNeXt-Tiny": {
+      "parameters": 27820897,
+      "latency": [
+        {
+          "batch": 1,
+          "median_ms": 2.049264996458078,
+          "images_per_second": 487.9798375165665
+        },
+        {
+          "batch": 32,
+          "median_ms": 23.588313997606747,
+          "images_per_second": 1356.603952416722
+        }
+      ],
+      "peak_memory_mib_batch32": 378.88671875
+    },
+    "CLIP ViT-B/16": {
+      "parameters": 85800193,
+      "latency": [
+        {
+          "batch": 1,
+          "median_ms": 2.9748230008408427,
+          "images_per_second": 336.1544534640706
+        },
+        {
+          "batch": 32,
+          "median_ms": 48.59882350137923,
+          "images_per_second": 658.4521536635932
+        }
+      ],
+      "peak_memory_mib_batch32": 563.86669921875
+    },
+    "Frequency": {
+      "parameters": 11293953,
+      "latency": [
+        {
+          "batch": 1,
+          "median_ms": 1.3081194992992096,
+          "images_per_second": 764.4561529246553
+        },
+        {
+          "batch": 32,
+          "median_ms": 8.914623504097108,
+          "images_per_second": 3589.607568428772
+        }
+      ],
+      "peak_memory_mib_batch32": 266.6728515625
+    }
+  }
+}

@@ -115,7 +115,32 @@ def _resolve_member(archive: ZipFile, row: dict[str, str]) -> ZipInfo:
             f"expected one image in {archive.filename} for {row['source_path']}; "
             f"found {len(matches)}"
         )
+    if matches[0].file_size == 0:
+        raise ValueError(f"empty ZIP member in {archive.filename}: {matches[0].filename}")
     return matches[0]
+
+
+def find_empty_members(rows: list[dict[str, str]], downloads_root: Path) -> set[str]:
+    """Return relative paths whose published archive member has zero bytes.
+
+    DF40 ships a few empty images. Catalog builders drop them before sampling so
+    a selected video never fails extraction. Unresolvable rows are left to
+    ``materialize_df40``, which rejects them.
+    """
+    empty: set[str] = set()
+    with ExitStack() as stack:
+        archives: dict[Path, ZipFile | None] = {}
+        for row in rows:
+            path = _archive_path(row, downloads_root)
+            if path not in archives:
+                archives[path] = stack.enter_context(ZipFile(path)) if path.is_file() else None
+            archive = archives[path]
+            if archive is None:
+                continue
+            names = [name for name in _candidate_members(row) if name in archive.NameToInfo]
+            if len(names) == 1 and archive.getinfo(names[0]).file_size == 0:
+                empty.add(row["relative_path"])
+    return empty
 
 
 def _matches_existing(path: Path, member: ZipInfo) -> bool:
@@ -126,6 +151,12 @@ def _matches_existing(path: Path, member: ZipInfo) -> bool:
         while chunk := stream.read(1024 * 1024):
             crc = zlib.crc32(chunk, crc)
     return crc == member.CRC
+
+
+def _current_umask() -> int:
+    mask = os.umask(0)
+    os.umask(mask)
+    return mask
 
 
 def _extract_one(archive: ZipFile, member: ZipInfo, destination: Path) -> int:
@@ -139,6 +170,9 @@ def _extract_one(archive: ZipFile, member: ZipInfo, destination: Path) -> int:
             shutil.copyfileobj(source, output, length=1024 * 1024)
         if temporary.stat().st_size != member.file_size:
             raise OSError(f"incomplete ZIP member: {member.filename}")
+        # mkstemp always creates 0600; apply the caller's umask so a shared
+        # project group can read extracted images like any other output.
+        os.chmod(temporary, 0o666 & ~_current_umask())
         os.replace(temporary, destination)
     finally:
         temporary.unlink(missing_ok=True)
