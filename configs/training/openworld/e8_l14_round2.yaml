@@ -1,0 +1,25 @@
+experiment:
+  protocol: df40_openworld_round2
+  manifest_dir: data/manifests/df40_openworld_round2/8d03d7a1cc56f0a00e8c
+  manifest_id: 8d03d7a1cc56f0a00e8c
+  manifest_sha256: 8d03d7a1cc56f0a00e8cb933f7ea169850a5315e154da61fb4b13909a75fc0b0
+  data_root: data/raw/df40_openworld
+  output_root: artifacts/openworld
+  seed: 20261007
+  require_cuda: true
+  model: clip_vit_l14
+  clip_revision: 32bd64288804d66eefd0ccbe215aa642df71cc41
+  gradient_checkpointing: true
+  augment: strong
+  sbi_share: 0.3
+  normalize_features: true
+  alignment_weight: 0.1
+  uniformity_weight: 0.1
+  batch_size: 32
+  workers: 8
+  epochs: 6
+  samples_per_epoch: 8000
+  patience: 3
+  lr: 5.0e-05
+  head_lr: 0.001
+  weight_decay: 0.0001

@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Resume the frozen round-two pipeline after the original Kandinsky decoder
+# exceeded xixi's 8 GB GPU.  A one-image smoke output validates CPU offload
+# before committing the queue slot to the full deterministic generation.
+set -euo pipefail
+umask 0007
+
+project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$project_root"
+
+export HF_HUB_OFFLINE=1
+export TRANSFORMERS_OFFLINE=1
+# Reduce allocator fragmentation during repeated model onload/offload cycles.
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+export PYTHONPATH="$project_root/.genlibs:$project_root/src"
+python="${PYTHON:-$HOME/deepfake-detection/.venv/bin/python}"
+
+"$python" scripts/generate_round2.py t2i \
+  --generator kandinsky22 --count 1 --batch 1 \
+  --output runtime/round2-smoke/kandinsky22-offload
+"$python" scripts/generate_round2.py t2i \
+  --generator kandinsky22 --count 2000 --batch 1 \
+  --output data/raw/df40/downloads/round2_generated/kandinsky22
+
+scripts/rebuild-round2
+scripts/run-round2-experiment

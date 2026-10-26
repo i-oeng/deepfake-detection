@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+# Run only after rebuild-round2 has frozen and audited the merged manifest.
+set -euo pipefail
+project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$project_root"
+export PYTHONPATH="$project_root/src"
+python="${PYTHON:-$HOME/deepfake-detection/.venv/bin/python}"
+config=configs/training/openworld/e8_l14_round2.yaml
+audit=reports/openworld/round2_audit.json
+selection=reports/openworld/round2_selection.json
+fresh_config=configs/evaluation/openworld_fresh_v2.yaml
+mkdir -p runtime/round2 artifacts/openworld/round2-validation artifacts/openworld/fresh-v2
+
+# Job 63 writes these only after all manifest and fresh-v2 separation gates pass.
+"$python" - <<'PY'
+import json
+from pathlib import Path
+
+audit = json.loads(Path("reports/openworld/round2_audit.json").read_text())
+if not audit["passed"]:
+    raise SystemExit("Round 2 audit did not pass")
+if not Path("configs/training/openworld/e8_l14_round2.yaml").is_file():
+    raise SystemExit("frozen E8 config is missing")
+PY
+
+declare -A e7_runs=(
+  [20261007]="artifacts/openworld/clip_vit_l14-20261007-adf10611e74ccef2191d-b3d28c85-642ae400"
+  [20261008]="artifacts/openworld/clip_vit_l14-20261008-adf10611e74ccef2191d-b3d28c85-24359c93"
+  [20261009]="artifacts/openworld/clip_vit_l14-20261009-adf10611e74ccef2191d-b3d28c85-90a88076"
+)
+
+baseline_args=()
+candidate_args=()
+for seed in 20261007 20261008 20261009; do
+  validation="artifacts/openworld/round2-validation/e7-$seed"
+  if [[ ! -f "$validation/validation_report.json" ]]; then
+    "$python" -m deepfake_detection.train.openworld score \
+      --run-dir "${e7_runs[$seed]}" --protocol-config "$config" --split validation \
+      --output "$validation"
+  fi
+  baseline_args+=(--baseline-report "$validation/validation_report.json")
+
+  result="runtime/round2/e8-$seed.json"
+  if [[ ! -f "$result" ]]; then
+    # Run as a module: Python 3.14 DataLoader workers start via forkserver and
+    # re-import __main__, which fails for a script read from stdin.
+    log="runtime/round2/e8-$seed.log"
+    "$python" -m deepfake_detection.train.openworld train \
+      --config "$config" --seed "$seed" | tee "$log"
+    # Epoch records are one-line JSON; the final result is the indented object.
+    LOG="$log" RESULT="$result" "$python" -c '
+import json, os
+from pathlib import Path
+text = "\n" + Path(os.environ["LOG"]).read_text()
+result = json.loads(text[text.rindex("\n{\n") + 1:])
+Path(os.environ["RESULT"]).write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")'
+  fi
+  run_dir="$(RESULT="$result" "$python" -c \
+    'import json,os; print(json.load(open(os.environ["RESULT"]))["run_dir"])')"
+  "$python" -c 'import json,sys; from pathlib import Path; p=Path(sys.argv[1]); r=json.load(open(p/"report.json")); assert (p/"best.pt").is_file() and r["manifest_id"] in p.name' "$run_dir"
+  candidate_args+=(--candidate-report "$run_dir/report.json")
+done
+
+"$python" scripts/select_round2.py "${baseline_args[@]}" "${candidate_args[@]}" \
+  --output "$selection"
+
+# The fresh test is reached only after the development rule above advances E8.
+baseline_predictions=()
+candidate_predictions=()
+for seed in 20261007 20261008 20261009; do
+  e7_output="artifacts/openworld/fresh-v2/e7-$seed"
+  if [[ ! -f "$e7_output/test_report.json" ]]; then
+    "$python" -m deepfake_detection.train.openworld score-manifest \
+      --run-dir "${e7_runs[$seed]}" --evaluation-config "$fresh_config" \
+      --output "$e7_output"
+  fi
+  baseline_predictions+=(--baseline "$e7_output/test.jsonl")
+
+  result="runtime/round2/e8-$seed.json"
+  run_dir="$(RESULT="$result" "$python" -c \
+    'import json,os; print(json.load(open(os.environ["RESULT"]))["run_dir"])')"
+  e8_output="artifacts/openworld/fresh-v2/e8-$seed"
+  if [[ ! -f "$e8_output/test_report.json" ]]; then
+    "$python" -m deepfake_detection.train.openworld score-manifest \
+      --run-dir "$run_dir" --evaluation-config "$fresh_config" --output "$e8_output"
+  fi
+  candidate_predictions+=(--candidate "$e8_output/test.jsonl")
+done
+
+release_output=artifacts/openworld/fresh-v2/release-clip-b16
+if [[ ! -f "$release_output/test_report.json" ]]; then
+  "$python" -m deepfake_detection.train.openworld score-manifest \
+    --run-dir artifacts/benchmark/clip_vit_b16-20261006-07f906d9ef61a537efa8-8f3b95e2-a77f7ac7 \
+    --evaluation-config "$fresh_config" --output "$release_output"
+fi
+"$python" scripts/compare_round2.py "${baseline_predictions[@]}" \
+  "${candidate_predictions[@]}" --output reports/openworld/round2_comparison.json
+"$python" scripts/render_round2_report.py \
+  --selection "$selection" --comparison reports/openworld/round2_comparison.json \
+  --release-report "$release_output/test_report.json" --audit "$audit" \
+  --output reports/openworld/round2_result.md

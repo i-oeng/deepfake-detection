@@ -1,0 +1,5 @@
+# Installed into an isolated target directory on xixi; PyTorch and Transformers
+# come from the project's CUDA environment.
+diffusers==0.35.2
+accelerate==1.10.1
+sentencepiece==0.2.1

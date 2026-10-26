@@ -7,6 +7,7 @@ pytest.importorskip("cv2")
 from deepfake_detection.train.openworld import (  # noqa: E402
     SBI_METHOD,
     alignment_uniformity,
+    source_fingerprint,
     with_pseudo_fakes,
 )
 from deepfake_detection.train.sbi import face_mask, self_blend  # noqa: E402
@@ -57,3 +58,17 @@ def test_alignment_and_uniformity():
     alignment, uniformity = alignment_uniformity(features, labels)
     assert float(alignment) == pytest.approx(0.0)
     assert float(uniformity) < 0
+
+
+def test_source_fingerprint_changes_with_training_source(tmp_path, monkeypatch):
+    from deepfake_detection.train import openworld
+
+    monkeypatch.setattr(openworld, "TRAINING_SOURCES", ("train.py", "data.py"))
+    (tmp_path / "train.py").write_text("first")
+    (tmp_path / "data.py").write_text("data")
+    before, files = source_fingerprint(tmp_path)
+    assert set(files) == {"train.py", "data.py"}
+
+    (tmp_path / "train.py").write_text("second")
+    after, _ = source_fingerprint(tmp_path)
+    assert after != before

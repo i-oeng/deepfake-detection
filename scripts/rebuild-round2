@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# Freeze Round 2 only after all five raw generation directories are complete.
+set -euo pipefail
+project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$project_root"
+export PYTHONPATH="$project_root/src"
+python="${PYTHON:-$HOME/deepfake-detection/.venv/bin/python}"
+subset=data/subsets/df40/df40_openworld_round2
+base_catalog=data/subsets/df40/df40_openworld_v1/catalog.csv
+base_manifest=data/manifests/df40_openworld_v1/adf10611e74ccef2191d
+fresh_manifest=data/manifests/openworld_fresh_v2/b209f9bcef05d95af5c1
+generated=data/raw/df40/downloads/round2_generated
+mkdir -p "$subset" runtime
+
+"$python" -m deepfake_detection.data.round2 catalog \
+  --base-catalog "$base_catalog" --generated-root "$generated" \
+  --output "$subset/additions_selected.csv" > runtime/round2_1_catalog.json
+"$python" -m deepfake_detection.data.openworld materialize \
+  --catalog "$subset/additions_selected.csv" --downloads-root data/raw \
+  --data-root data/raw/df40_openworld --output "$subset/additions_materialized.csv" \
+  --workers 12 --size-at-original-resolution > runtime/round2_2_materialize.json
+"$python" -m deepfake_detection.data.round2 merge \
+  --base-catalog "$base_catalog" --additions-catalog "$subset/additions_materialized.csv" \
+  --output "$subset/catalog.csv" > runtime/round2_3_merge.json
+# Build once to obtain post-canonicalization fingerprints for leakage pruning.
+"$python" -m deepfake_detection.data.cli build \
+  --config configs/datasets/df40_openworld_round2.yaml \
+  > runtime/round2_4_manifest_unpruned.json
+unpruned="$("$python" -c \
+  "import json; print(json.load(open('runtime/round2_4_manifest_unpruned.json'))['manifest'])")"
+"$python" -m deepfake_detection.data.round2 prune-fresh \
+  --catalog "$subset/additions_materialized.csv" --manifest-dir "$(dirname "$unpruned")" \
+  --fresh-manifest-dir "$fresh_manifest" --output "$subset/additions_pruned.csv" \
+  > runtime/round2_5_prune_fresh.json
+"$python" -m deepfake_detection.data.round2 merge \
+  --base-catalog "$base_catalog" --additions-catalog "$subset/additions_pruned.csv" \
+  --output "$subset/catalog.csv" > runtime/round2_6_merge_final.json
+"$python" -m deepfake_detection.data.cli build \
+  --config configs/datasets/df40_openworld_round2.yaml \
+  > runtime/round2_7_manifest.json
+manifest="$("$python" -c \
+  "import json; print(json.load(open('runtime/round2_7_manifest.json'))['manifest'])")"
+"$python" -m deepfake_detection.data.round2 audit \
+  --manifest-dir "$(dirname "$manifest")" --base-manifest-dir "$base_manifest" \
+  --fresh-manifest-dir "$fresh_manifest" --output reports/openworld/round2_audit.json \
+  > runtime/round2_8_audit.json
+"$python" -m deepfake_detection.data.round2 freeze-config \
+  --base-config configs/training/openworld/e7_l14_strongaug_sbi_gend_short.yaml \
+  --manifest-dir "$(dirname "$manifest")" \
+  --output configs/training/openworld/e8_l14_round2.yaml \
+  > runtime/round2_9_config.json
+echo "$manifest"

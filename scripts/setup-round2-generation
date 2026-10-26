@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# Keep generation-only libraries out of the shared training environment.
+set -euo pipefail
+project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+python="${PYTHON:-$HOME/deepfake-detection/.venv/bin/python}"
+target="$project_root/.genlibs"
+umask 0007
+mkdir -p "$target"
+"$python" -m pip install --target "$target" --upgrade --no-deps \
+  -r "$project_root/requirements/round2-generation.txt"
+PYTHONPATH="$target:$project_root/src" "$python" - <<'PY'
+import accelerate
+import diffusers
+import sentencepiece
+
+expected = {"diffusers": "0.35.2", "accelerate": "1.10.1", "sentencepiece": "0.2.1"}
+actual = {
+    "diffusers": diffusers.__version__,
+    "accelerate": accelerate.__version__,
+    "sentencepiece": sentencepiece.__version__,
+}
+if actual != expected:
+    raise SystemExit(f"generation dependency versions differ: {actual}")
+print(actual)
+PY

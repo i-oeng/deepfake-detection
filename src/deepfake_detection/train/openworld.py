@@ -15,6 +15,7 @@ import io
 import json
 import math
 import random
+import shutil
 from pathlib import Path
 
 import numpy as np
@@ -27,7 +28,11 @@ from torch.utils.data import DataLoader, Dataset, WeightedRandomSampler
 from torchvision import transforms
 
 from deepfake_detection.data.config import find_project_root
-from deepfake_detection.data.openworld import method_roles
+from deepfake_detection.data.openworld import (
+    PROTOCOL_ROUND2,
+    PROTOCOL_V1,
+    method_roles,
+)
 from deepfake_detection.data.unseen import audit_unseen_manifest
 
 from . import benchmark, corruptions
@@ -42,13 +47,26 @@ from .evaluation import report as domain_report
 from .loop import _seed_worker
 from .sbi import self_blend
 
-PROTOCOL = "df40_openworld_v1"
+PROTOCOLS = frozenset((PROTOCOL_V1, PROTOCOL_ROUND2))
 CLIP_REPOSITORIES = {
     "clip_vit_b16": "openai/clip-vit-base-patch16",
     "clip_vit_l14": "openai/clip-vit-large-patch14",
 }
 CLIP_MEAN, CLIP_STD = benchmark.NORMALIZE["clip_vit_b16"]
 SBI_METHOD = "sbi"
+TRAINING_SOURCES = (
+    "src/deepfake_detection/data/manifest.py",
+    "src/deepfake_detection/data/openworld.py",
+    "src/deepfake_detection/data/unseen.py",
+    "src/deepfake_detection/train/benchmark.py",
+    "src/deepfake_detection/train/common.py",
+    "src/deepfake_detection/train/corruptions.py",
+    "src/deepfake_detection/train/evaluation.py",
+    "src/deepfake_detection/train/loop.py",
+    "src/deepfake_detection/train/metrics.py",
+    "src/deepfake_detection/train/openworld.py",
+    "src/deepfake_detection/train/sbi.py",
+)
 
 
 class Detector(nn.Module):
@@ -251,10 +269,11 @@ def open_world_report(records: list[dict]) -> dict:
 
 
 def _load(config: dict, root: Path) -> tuple[dict[str, list], Path, dict]:
-    if config.get("protocol") != PROTOCOL:
-        raise ValueError(f"configuration is not for protocol {PROTOCOL}")
+    protocol = str(config.get("protocol", ""))
+    if protocol not in PROTOCOLS:
+        raise ValueError(f"configuration protocol must be one of {sorted(PROTOCOLS)}")
     rows, manifest_path, _ = load_manifest_rows(config, root)
-    roles = method_roles()
+    roles = method_roles(protocol)
     audit = audit_unseen_manifest(manifest_path.parent, roles)
     if not audit["passed"]:
         raise ValueError("protocol audit failed: " + "; ".join(audit["failures"]))
@@ -282,6 +301,37 @@ def _device(config: dict) -> torch.device:
     return device
 
 
+def source_fingerprint(root: Path) -> tuple[str, dict[str, str]]:
+    """Hash the exact uncommitted training sources used by a run."""
+    digest = hashlib.sha256()
+    files = {}
+    for relative in TRAINING_SOURCES:
+        path = root / relative
+        payload = path.read_bytes()
+        value = hashlib.sha256(payload).hexdigest()
+        files[relative] = value
+        digest.update(relative.encode())
+        digest.update(b"\0")
+        digest.update(payload)
+        digest.update(b"\0")
+    return digest.hexdigest(), files
+
+
+def snapshot_sources(root: Path, directory: Path, files: dict[str, str]) -> None:
+    """Copy hashed source files into the artifact so a dirty-tree run is reviewable."""
+    snapshot = directory / "source_snapshot"
+    for relative, expected in files.items():
+        source = root / relative
+        target = snapshot / relative
+        if hashlib.sha256(source.read_bytes()).hexdigest() != expected:
+            raise RuntimeError(f"training source changed while creating the run: {relative}")
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, target)
+    (directory / "source_manifest.json").write_text(
+        json.dumps(files, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+
+
 def train(config_path: Path, *, seed: int | None = None) -> dict:
     root = find_project_root(config_path.resolve().parent)
     config = dict(yaml.safe_load(config_path.read_text(encoding="utf-8"))["experiment"])
@@ -293,14 +343,20 @@ def train(config_path: Path, *, seed: int | None = None) -> dict:
     model = Detector(config).to(device)
     set_trainable(model)
     commit = git_commit(root)
+    source_sha256, source_files = source_fingerprint(root)
     config_id = hashlib.sha256(
-        json.dumps(config, sort_keys=True, separators=(",", ":")).encode()
+        json.dumps(
+            {"config": config, "source_sha256": source_sha256},
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode()
     ).hexdigest()[:8]
     run_id = f"{config['model']}-{config['seed']}-{config['manifest_id']}-{commit[:8]}-{config_id}"
     directory = root / str(config.get("output_root", "artifacts/openworld")) / run_id
     directory.mkdir(parents=True, exist_ok=False)
     (directory / "config.json").write_text(json.dumps(config, indent=2, sort_keys=True) + "\n")
     (directory / "audit.json").write_text(json.dumps(audit, indent=2, sort_keys=True) + "\n")
+    snapshot_sources(root, directory, source_files)
 
     train_rows, weights = with_pseudo_fakes(splits["train"], float(config.get("sbi_share", 0.0)))
     dataset = Images(train_rows, training=True, strength=str(config.get("augment", "base")))
@@ -372,7 +428,8 @@ def train(config_path: Path, *, seed: int | None = None) -> dict:
     records = predict(model, splits["validation"], config, device)
     _write_jsonl(directory / "validation.jsonl", records)
     report = {
-        "protocol": PROTOCOL, "run_id": run_id, "git_commit": commit,
+        "protocol": config["protocol"], "run_id": run_id, "git_commit": commit,
+        "source_sha256": source_sha256,
         "manifest_id": config["manifest_id"], "manifest_sha256": config["manifest_sha256"],
         "checkpoint_sha256": sha256_file(directory / "best.pt"),
         "best_epoch": best_epoch, "history": history,
@@ -400,7 +457,7 @@ def _model_from_run(run_dir: Path, device: torch.device) -> tuple[nn.Module, dic
     report = json.loads((run_dir / "report.json").read_text(encoding="utf-8"))
     if sha256_file(run_dir / "best.pt") != report["checkpoint_sha256"]:
         raise ValueError("checkpoint hash differs from the run report")
-    if config.get("protocol") == PROTOCOL:
+    if config.get("protocol") in PROTOCOLS:
         model: nn.Module = Detector(config)
     else:
         model = benchmark.BinaryEncoder(config["model"], config)
@@ -419,14 +476,14 @@ def score_run(run_dir: Path, protocol_config: Path, split: str, output: Path) ->
     splits, _, _ = _load(protocol, root)
     device = _device(protocol)
     model, config, report = _model_from_run(run_dir.resolve(), device)
-    if config.get("protocol") != PROTOCOL and config["model"] != "clip_vit_b16":
+    if config.get("protocol") not in PROTOCOLS and config["model"] != "clip_vit_b16":
         raise ValueError("frozen-protocol baselines are scored with CLIP preprocessing only")
     output.mkdir(parents=True, exist_ok=True)
     records = predict(model, splits[split], {**protocol, "workers": protocol.get("workers", 4)},
                       device)
     _write_jsonl(output / f"{split}.jsonl", records)
     result = {
-        "protocol": PROTOCOL, "split": split, "run_dir": str(run_dir),
+        "protocol": protocol["protocol"], "split": split, "run_dir": str(run_dir),
         "checkpoint_sha256": report["checkpoint_sha256"],
         "manifest_id": protocol["manifest_id"], split: open_world_report(records),
     }
@@ -450,7 +507,7 @@ def score_manifest(run_dir: Path, evaluation_config: Path, output: Path) -> dict
         raise ValueError("score-manifest expects a test-only manifest")
     device = _device(evaluation)
     model, config, report = _model_from_run(run_dir.resolve(), device)
-    if config.get("protocol") != PROTOCOL and config["model"] != "clip_vit_b16":
+    if config.get("protocol") not in PROTOCOLS and config["model"] != "clip_vit_b16":
         raise ValueError("frozen-protocol baselines are scored with CLIP preprocessing only")
     output.mkdir(parents=True, exist_ok=True)
     records = predict(model, rows, evaluation, device)

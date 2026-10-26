@@ -16,6 +16,16 @@ def test_every_generator_has_exactly_one_role():
     assert len(roles["train"]) == len(openworld.TRAIN_METHODS)
 
 
+def test_round2_extends_only_training_and_validation_roles():
+    v1 = method_roles()
+    round2 = method_roles(openworld.PROTOCOL_ROUND2)
+    assert round2["train"] - v1["train"] == openworld.ROUND2_TRAIN_METHODS
+    assert round2["validation"] - v1["validation"] == openworld.ROUND2_VALIDATION_METHODS
+    assert round2["test"] == v1["test"]
+    names = [method for methods in round2.values() for method in methods]
+    assert len(names) == len(set(names))
+
+
 def test_df40_member_layouts():
     assert df40_member("DiT/001/10037.png", default_domain="ff") == ("ff", "001", "10037.png")
     assert df40_member("cdf/frames/id9_id0_0006/349.png", default_domain=None) == (

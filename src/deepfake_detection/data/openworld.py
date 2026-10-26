@@ -29,6 +29,10 @@ from .materialize import _extract_one, _matches_existing
 
 FS, FR, EFS, FE = "face_swap", "face_reenactment", "entire_face_synthesis", "face_edit"
 SPLITS = ("train", "validation", "test")
+PROTOCOL_V1 = "df40_openworld_v1"
+PROTOCOL_ROUND2 = "df40_openworld_round2"
+ROUND2_TRAIN_METHODS = {"kandinsky22", "sana600m", "recon_movq", "recon_dcae"}
+ROUND2_VALIDATION_METHODS = {"stable_cascade_lite"}
 
 # DF40 training archives contain FF++ training clips only.
 TRAIN_METHODS = {
@@ -106,11 +110,16 @@ DETECTION_SIDE = 320
 JPEG_QUALITY = 90
 
 
-def method_roles() -> dict[str, set[str]]:
+def method_roles(protocol: str = PROTOCOL_V1) -> dict[str, set[str]]:
     """Fake methods allowed in each split, for the lineage audit."""
+    if protocol not in {PROTOCOL_V1, PROTOCOL_ROUND2}:
+        raise ValueError(f"unknown open-world protocol: {protocol}")
     roles: dict[str, set[str]] = {"train": set(TRAIN_METHODS), "validation": set(), "test": set()}
     for method, (split, _, _) in (*EVAL_METHODS.items(), *EXTERNAL.items(), ("e4e", E4E)):
         roles[split].add(method)
+    if protocol == PROTOCOL_ROUND2:
+        roles["train"].update(ROUND2_TRAIN_METHODS)
+        roles["validation"].update(ROUND2_VALIDATION_METHODS)
     return roles
 
 
