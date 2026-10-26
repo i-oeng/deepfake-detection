@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# Freeze round 3 once both FairFace reconstruction pools are complete. Fresh v3
+# must already be built (scripts/rebuild-fresh-v3): additions are pruned against it.
+set -euo pipefail
+umask 0007
+project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$project_root"
+export PYTHONPATH="$project_root/src"
+python="${PYTHON:-$HOME/deepfake-detection/.venv/bin/python}"
+workers="${WORKERS:-12}"
+subset=data/subsets/df40/df40_openworld_round3
+base_catalog=data/subsets/df40/df40_openworld_v1/catalog.csv
+round2_additions=data/subsets/df40/df40_openworld_round2/additions_pruned.csv
+base_manifest=data/manifests/df40_openworld_v1/adf10611e74ccef2191d
+data_root=data/raw/df40_openworld
+references=(
+  --reference data/manifests/openworld_fresh_v2/b209f9bcef05d95af5c1 data/raw/fresh_v2_images
+  --reference data/manifests/openworld_fresh_v3/f8fb7343da06e7a81dd7 data/raw/fresh_v3_images
+)
+mkdir -p "$subset" runtime
+
+"$python" -m deepfake_detection.data.round3 catalog \
+  --selection "$subset/fairface_selection.json" \
+  --round2-generated data/raw/df40/downloads/round2_generated \
+  --round3-generated data/raw/df40/downloads/round3_generated \
+  --output "$subset/round3_selected.csv" > runtime/round3_1_catalog.json
+"$python" -m deepfake_detection.data.openworld materialize \
+  --catalog "$subset/round3_selected.csv" --downloads-root data/raw \
+  --data-root "$data_root" --output "$subset/round3_materialized.csv" \
+  --workers "$workers" --size-at-original-resolution > runtime/round3_2_materialize.json
+"$python" -m deepfake_detection.data.round3 combine \
+  --round2-additions "$round2_additions" --round3-additions "$subset/round3_materialized.csv" \
+  --output "$subset/additions.csv" > runtime/round3_3_combine.json
+"$python" -m deepfake_detection.data.round2 merge \
+  --base-catalog "$base_catalog" --additions-catalog "$subset/additions.csv" \
+  --output "$subset/catalog.csv" > runtime/round3_4_merge.json
+# Build once to obtain post-canonicalization fingerprints for leakage pruning. The
+# collisions it may report are what pruning removes; the final build must pass.
+"$python" -m deepfake_detection.data.cli build --allow-audit-failures \
+  --config configs/datasets/df40_openworld_round3.yaml > runtime/round3_5_manifest_unpruned.json
+unpruned="$("$python" -c \
+  "import json; print(json.load(open('runtime/round3_5_manifest_unpruned.json'))['manifest'])")"
+"$python" -m deepfake_detection.data.round3 prune \
+  --catalog "$subset/additions.csv" --manifest-dir "$(dirname "$unpruned")" \
+  --data-root "$data_root" "${references[@]}" --workers "$workers" \
+  --output "$subset/additions_pruned.csv" > runtime/round3_6_prune.json
+"$python" -m deepfake_detection.data.round2 merge \
+  --base-catalog "$base_catalog" --additions-catalog "$subset/additions_pruned.csv" \
+  --output "$subset/catalog.csv" > runtime/round3_7_merge_final.json
+"$python" -m deepfake_detection.data.cli build \
+  --config configs/datasets/df40_openworld_round3.yaml > runtime/round3_8_manifest.json
+manifest="$("$python" -c \
+  "import json; print(json.load(open('runtime/round3_8_manifest.json'))['manifest'])")"
+"$python" -m deepfake_detection.data.round3 audit \
+  --manifest-dir "$(dirname "$manifest")" --base-manifest-dir "$base_manifest" \
+  --data-root "$data_root" "${references[@]}" --workers "$workers" \
+  --output reports/openworld/round3_audit.json > runtime/round3_9_audit.json
+"$python" -m deepfake_detection.data.round3 freeze-config \
+  --base-config configs/training/openworld/e8_l14_round2.yaml \
+  --manifest-dir "$(dirname "$manifest")" \
+  --output configs/training/openworld/e9_l14_round3.yaml > runtime/round3_10_config.json
+echo "$manifest"

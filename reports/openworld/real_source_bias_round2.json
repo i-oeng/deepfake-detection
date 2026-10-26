@@ -1,0 +1,483 @@
+{
+  "e7": {
+    "mean": {
+      "test_mean_auroc": 0.9173206813901729,
+      "test_mean_fpr": 0.06094436211704898,
+      "validation_mean_auroc": 0.9458627887820219
+    },
+    "seeds": [
+      {
+        "reference": "ff",
+        "reference_fpr_at_threshold": 0.0,
+        "reference_videos": 55,
+        "target_fpr": 0.1,
+        "test": {
+          "celebdf_video": {
+            "auroc_vs_reference": 0.9263040238450074,
+            "fpr_at_threshold": 0.00819672131147541,
+            "median_score": 0.4668686348198394,
+            "videos": 732
+          },
+          "dff": {
+            "auroc_vs_reference": 0.8888803287108372,
+            "fpr_at_threshold": 0.012711864406779662,
+            "median_score": 0.41703406174815333,
+            "videos": 708
+          },
+          "sfhq_t2i": {
+            "auroc_vs_reference": 0.9329272727272727,
+            "fpr_at_threshold": 0.1655,
+            "median_score": 0.5458909889745323,
+            "videos": 2000
+          }
+        },
+        "test_mean_auroc": 0.9160372084277059,
+        "test_mean_fpr": 0.06213619523941836,
+        "threshold": 0.7892336936802291,
+        "validation": {
+          "cdf": {
+            "auroc_vs_reference": 0.9212121212121213,
+            "fpr_at_threshold": 0.01282051282051282,
+            "median_score": 0.452763582151955,
+            "videos": 156
+          },
+          "stable_cascade_lite": {
+            "auroc_vs_reference": 0.9360727272727273,
+            "fpr_at_threshold": 0.16,
+            "median_score": 0.5646967007512463,
+            "videos": 1000
+          },
+          "stargan": {
+            "auroc_vs_reference": 0.9715636363636364,
+            "fpr_at_threshold": 0.136,
+            "median_score": 0.6334102636778401,
+            "videos": 1000
+          },
+          "styleclip": {
+            "auroc_vs_reference": 0.9570865058251536,
+            "fpr_at_threshold": 0.11503531786074672,
+            "median_score": 0.5813030906443133,
+            "videos": 991
+          },
+          "whichfaceisreal": {
+            "auroc_vs_reference": 0.9397272727272727,
+            "fpr_at_threshold": 0.162,
+            "median_score": 0.570809825198928,
+            "videos": 1000
+          }
+        },
+        "validation_mean_auroc": 0.9451324526801823
+      },
+      {
+        "reference": "ff",
+        "reference_fpr_at_threshold": 0.0,
+        "reference_videos": 55,
+        "target_fpr": 0.1,
+        "test": {
+          "celebdf_video": {
+            "auroc_vs_reference": 0.9321162444113263,
+            "fpr_at_threshold": 0.00819672131147541,
+            "median_score": 0.45833839808215215,
+            "videos": 732
+          },
+          "dff": {
+            "auroc_vs_reference": 0.8929378531073446,
+            "fpr_at_threshold": 0.011299435028248588,
+            "median_score": 0.4108744858125877,
+            "videos": 708
+          },
+          "sfhq_t2i": {
+            "auroc_vs_reference": 0.9270181818181819,
+            "fpr_at_threshold": 0.1565,
+            "median_score": 0.5122961038732887,
+            "videos": 2000
+          }
+        },
+        "test_mean_auroc": 0.9173574264456176,
+        "test_mean_fpr": 0.05866538544657466,
+        "threshold": 0.7786493120021721,
+        "validation": {
+          "cdf": {
+            "auroc_vs_reference": 0.9286713286713286,
+            "fpr_at_threshold": 0.01282051282051282,
+            "median_score": 0.44678684951435055,
+            "videos": 156
+          },
+          "stable_cascade_lite": {
+            "auroc_vs_reference": 0.9310181818181819,
+            "fpr_at_threshold": 0.155,
+            "median_score": 0.5299324162364827,
+            "videos": 1000
+          },
+          "stargan": {
+            "auroc_vs_reference": 0.9716181818181818,
+            "fpr_at_threshold": 0.154,
+            "median_score": 0.6083613872903819,
+            "videos": 1000
+          },
+          "styleclip": {
+            "auroc_vs_reference": 0.9571782405283918,
+            "fpr_at_threshold": 0.12008072653884964,
+            "median_score": 0.5604932347880464,
+            "videos": 991
+          },
+          "whichfaceisreal": {
+            "auroc_vs_reference": 0.9355818181818182,
+            "fpr_at_threshold": 0.153,
+            "median_score": 0.5361914753193688,
+            "videos": 1000
+          }
+        },
+        "validation_mean_auroc": 0.9448135502035804
+      },
+      {
+        "reference": "ff",
+        "reference_fpr_at_threshold": 0.0,
+        "reference_videos": 55,
+        "target_fpr": 0.1,
+        "test": {
+          "celebdf_video": {
+            "auroc_vs_reference": 0.9340039741679086,
+            "fpr_at_threshold": 0.012295081967213115,
+            "median_score": 0.45731040252694294,
+            "videos": 732
+          },
+          "dff": {
+            "auroc_vs_reference": 0.8894709809964048,
+            "fpr_at_threshold": 0.011299435028248588,
+            "median_score": 0.4059196429977849,
+            "videos": 708
+          },
+          "sfhq_t2i": {
+            "auroc_vs_reference": 0.9322272727272727,
+            "fpr_at_threshold": 0.1625,
+            "median_score": 0.5239075136842819,
+            "videos": 2000
+          }
+        },
+        "test_mean_auroc": 0.9185674092971953,
+        "test_mean_fpr": 0.0620315056651539,
+        "threshold": 0.7826624789529376,
+        "validation": {
+          "cdf": {
+            "auroc_vs_reference": 0.9301864801864802,
+            "fpr_at_threshold": 0.01282051282051282,
+            "median_score": 0.449656486892625,
+            "videos": 156
+          },
+          "stable_cascade_lite": {
+            "auroc_vs_reference": 0.9359636363636363,
+            "fpr_at_threshold": 0.16,
+            "median_score": 0.5363128285595137,
+            "videos": 1000
+          },
+          "stargan": {
+            "auroc_vs_reference": 0.9726,
+            "fpr_at_threshold": 0.139,
+            "median_score": 0.6185500178538568,
+            "videos": 1000
+          },
+          "styleclip": {
+            "auroc_vs_reference": 0.958370791670489,
+            "fpr_at_threshold": 0.11402623612512613,
+            "median_score": 0.5640984800226174,
+            "videos": 991
+          },
+          "whichfaceisreal": {
+            "auroc_vs_reference": 0.9410909090909091,
+            "fpr_at_threshold": 0.17,
+            "median_score": 0.5550734890579037,
+            "videos": 1000
+          }
+        },
+        "validation_mean_auroc": 0.9476423634623028
+      }
+    ],
+    "test_inputs": [
+      "artifacts/openworld/fresh-v2/e7-20261007/test.jsonl",
+      "artifacts/openworld/fresh-v2/e7-20261008/test.jsonl",
+      "artifacts/openworld/fresh-v2/e7-20261009/test.jsonl"
+    ],
+    "validation_inputs": [
+      "artifacts/openworld/round2-validation/e7-20261007/validation.jsonl",
+      "artifacts/openworld/round2-validation/e7-20261008/validation.jsonl",
+      "artifacts/openworld/round2-validation/e7-20261009/validation.jsonl"
+    ]
+  },
+  "e8": {
+    "mean": {
+      "test_mean_auroc": 0.9435507706499093,
+      "test_mean_fpr": 0.0652688761281426,
+      "validation_mean_auroc": 0.9645155346055446
+    },
+    "seeds": [
+      {
+        "reference": "ff",
+        "reference_fpr_at_threshold": 0.0,
+        "reference_videos": 55,
+        "target_fpr": 0.1,
+        "test": {
+          "celebdf_video": {
+            "auroc_vs_reference": 0.912816691505216,
+            "fpr_at_threshold": 0.00273224043715847,
+            "median_score": 0.4253306846100532,
+            "videos": 732
+          },
+          "dff": {
+            "auroc_vs_reference": 0.9430662557781202,
+            "fpr_at_threshold": 0.012711864406779662,
+            "median_score": 0.4466153904602066,
+            "videos": 708
+          },
+          "sfhq_t2i": {
+            "auroc_vs_reference": 0.9719636363636364,
+            "fpr_at_threshold": 0.188,
+            "median_score": 0.5609743117184075,
+            "videos": 2000
+          }
+        },
+        "test_mean_auroc": 0.9426155278823242,
+        "test_mean_fpr": 0.06781470161464605,
+        "threshold": 0.8080672135527632,
+        "validation": {
+          "cdf": {
+            "auroc_vs_reference": 0.9265734265734266,
+            "fpr_at_threshold": 0.00641025641025641,
+            "median_score": 0.4218384541661441,
+            "videos": 156
+          },
+          "stable_cascade_lite": {
+            "auroc_vs_reference": 0.9719272727272728,
+            "fpr_at_threshold": 0.179,
+            "median_score": 0.5624168369385263,
+            "videos": 1000
+          },
+          "stargan": {
+            "auroc_vs_reference": 0.9758363636363636,
+            "fpr_at_threshold": 0.11,
+            "median_score": 0.5786862731231799,
+            "videos": 1000
+          },
+          "styleclip": {
+            "auroc_vs_reference": 0.9729566094853683,
+            "fpr_at_threshold": 0.1099899091826438,
+            "median_score": 0.5592900469770627,
+            "videos": 991
+          },
+          "whichfaceisreal": {
+            "auroc_vs_reference": 0.9734,
+            "fpr_at_threshold": 0.191,
+            "median_score": 0.5667380328769767,
+            "videos": 1000
+          }
+        },
+        "validation_mean_auroc": 0.9641387344844862
+      },
+      {
+        "reference": "ff",
+        "reference_fpr_at_threshold": 0.0,
+        "reference_videos": 55,
+        "target_fpr": 0.1,
+        "test": {
+          "celebdf_video": {
+            "auroc_vs_reference": 0.9157476403378043,
+            "fpr_at_threshold": 0.00273224043715847,
+            "median_score": 0.4244403772866472,
+            "videos": 732
+          },
+          "dff": {
+            "auroc_vs_reference": 0.9437853107344633,
+            "fpr_at_threshold": 0.011299435028248588,
+            "median_score": 0.4451677025044911,
+            "videos": 708
+          },
+          "sfhq_t2i": {
+            "auroc_vs_reference": 0.9721090909090909,
+            "fpr_at_threshold": 0.18,
+            "median_score": 0.5503657140662637,
+            "videos": 2000
+          }
+        },
+        "test_mean_auroc": 0.9438806806604528,
+        "test_mean_fpr": 0.06467722515513569,
+        "threshold": 0.8068526199774353,
+        "validation": {
+          "cdf": {
+            "auroc_vs_reference": 0.9291375291375291,
+            "fpr_at_threshold": 0.00641025641025641,
+            "median_score": 0.42126776227423013,
+            "videos": 156
+          },
+          "stable_cascade_lite": {
+            "auroc_vs_reference": 0.9720181818181818,
+            "fpr_at_threshold": 0.171,
+            "median_score": 0.5541085427633552,
+            "videos": 1000
+          },
+          "stargan": {
+            "auroc_vs_reference": 0.9768181818181818,
+            "fpr_at_threshold": 0.114,
+            "median_score": 0.57439461425398,
+            "videos": 1000
+          },
+          "styleclip": {
+            "auroc_vs_reference": 0.9739656912209889,
+            "fpr_at_threshold": 0.1170534813319879,
+            "median_score": 0.5559174577936432,
+            "videos": 991
+          },
+          "whichfaceisreal": {
+            "auroc_vs_reference": 0.9733818181818182,
+            "fpr_at_threshold": 0.183,
+            "median_score": 0.5574839325332843,
+            "videos": 1000
+          }
+        },
+        "validation_mean_auroc": 0.96506428043534
+      },
+      {
+        "reference": "ff",
+        "reference_fpr_at_threshold": 0.0,
+        "reference_videos": 55,
+        "target_fpr": 0.1,
+        "test": {
+          "celebdf_video": {
+            "auroc_vs_reference": 0.9166666666666666,
+            "fpr_at_threshold": 0.00273224043715847,
+            "median_score": 0.4278475647168134,
+            "videos": 732
+          },
+          "dff": {
+            "auroc_vs_reference": 0.9444016435541859,
+            "fpr_at_threshold": 0.012711864406779662,
+            "median_score": 0.44697745181783594,
+            "videos": 708
+          },
+          "sfhq_t2i": {
+            "auroc_vs_reference": 0.9714,
+            "fpr_at_threshold": 0.1745,
+            "median_score": 0.5493988599199016,
+            "videos": 2000
+          }
+        },
+        "test_mean_auroc": 0.9441561034069509,
+        "test_mean_fpr": 0.06331470161464604,
+        "threshold": 0.8104789086703224,
+        "validation": {
+          "cdf": {
+            "auroc_vs_reference": 0.9273892773892773,
+            "fpr_at_threshold": 0.00641025641025641,
+            "median_score": 0.42279493669565393,
+            "videos": 156
+          },
+          "stable_cascade_lite": {
+            "auroc_vs_reference": 0.9709454545454546,
+            "fpr_at_threshold": 0.167,
+            "median_score": 0.5535052756784323,
+            "videos": 1000
+          },
+          "stargan": {
+            "auroc_vs_reference": 0.9772181818181818,
+            "fpr_at_threshold": 0.125,
+            "median_score": 0.5803520483765656,
+            "videos": 1000
+          },
+          "styleclip": {
+            "auroc_vs_reference": 0.9738923034583983,
+            "fpr_at_threshold": 0.12108980827447023,
+            "median_score": 0.5650587515863784,
+            "videos": 991
+          },
+          "whichfaceisreal": {
+            "auroc_vs_reference": 0.9722727272727273,
+            "fpr_at_threshold": 0.179,
+            "median_score": 0.5595307267350265,
+            "videos": 1000
+          }
+        },
+        "validation_mean_auroc": 0.9643435888968078
+      }
+    ],
+    "test_inputs": [
+      "artifacts/openworld/fresh-v2/e8-20261007/test.jsonl",
+      "artifacts/openworld/fresh-v2/e8-20261008/test.jsonl",
+      "artifacts/openworld/fresh-v2/e8-20261009/test.jsonl"
+    ],
+    "validation_inputs": [
+      "artifacts/openworld/clip_vit_l14-20261007-8d03d7a1cc56f0a00e8c-d3bb2d65-03152b3f/validation.jsonl",
+      "artifacts/openworld/clip_vit_l14-20261008-8d03d7a1cc56f0a00e8c-d3bb2d65-9bc75790/validation.jsonl",
+      "artifacts/openworld/clip_vit_l14-20261009-8d03d7a1cc56f0a00e8c-d3bb2d65-e44c675e/validation.jsonl"
+    ]
+  },
+  "release": {
+    "mean": {
+      "test_mean_auroc": 0.9895932450372017,
+      "test_mean_fpr": 0.04346888024451236,
+      "validation_mean_auroc": 0.9945355521370658
+    },
+    "seeds": [
+      {
+        "reference": "ff",
+        "reference_fpr_at_threshold": 0.0,
+        "reference_videos": 55,
+        "target_fpr": 0.1,
+        "test": {
+          "celebdf_video": {
+            "auroc_vs_reference": 0.9918281172379533,
+            "fpr_at_threshold": 0.031420765027322405,
+            "median_score": 0.6366992279129795,
+            "videos": 732
+          },
+          "dff": {
+            "auroc_vs_reference": 0.9858243451463791,
+            "fpr_at_threshold": 0.03248587570621469,
+            "median_score": 0.5139429111397829,
+            "videos": 708
+          },
+          "sfhq_t2i": {
+            "auroc_vs_reference": 0.9911272727272727,
+            "fpr_at_threshold": 0.0665,
+            "median_score": 0.6352224414795979,
+            "videos": 2000
+          }
+        },
+        "test_mean_auroc": 0.9895932450372017,
+        "test_mean_fpr": 0.04346888024451236,
+        "threshold": 0.9399133498259924,
+        "validation": {
+          "cdf": {
+            "auroc_vs_reference": 0.9919580419580419,
+            "fpr_at_threshold": 0.01282051282051282,
+            "median_score": 0.593796709077635,
+            "videos": 156
+          },
+          "stargan": {
+            "auroc_vs_reference": 0.9975636363636363,
+            "fpr_at_threshold": 0.212,
+            "median_score": 0.870597268408361,
+            "videos": 1000
+          },
+          "styleclip": {
+            "auroc_vs_reference": 0.9962205302265847,
+            "fpr_at_threshold": 0.18869828456104945,
+            "median_score": 0.8210441123099046,
+            "videos": 991
+          },
+          "whichfaceisreal": {
+            "auroc_vs_reference": 0.9924,
+            "fpr_at_threshold": 0.083,
+            "median_score": 0.6513543402007393,
+            "videos": 1000
+          }
+        },
+        "validation_mean_auroc": 0.9945355521370658
+      }
+    ],
+    "test_inputs": [
+      "artifacts/openworld/fresh-v2/release-clip-b16/test.jsonl"
+    ],
+    "validation_inputs": [
+      "artifacts/openworld/baseline-release-clip-b16/validation.jsonl"
+    ]
+  }
+}

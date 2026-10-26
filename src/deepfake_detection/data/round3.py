@@ -58,7 +58,7 @@ REPLACED_DOMAINS = frozenset({"round2_kandinsky22", "round2_sana600m"})
 THUMBNAIL_SIDE = 32
 # Thumbnail correlation at or above which two images count as one (calibrated in
 # reports/openworld/round3_protocol.md).
-NEAR_DUPLICATE_CORRELATION = 0.97
+NEAR_DUPLICATE_CORRELATION = 0.99
 
 
 def select_fairface(metadata: Path, output: Path, *, seed: str = SEED) -> dict:

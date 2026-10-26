@@ -50,3 +50,15 @@ The preregistered clear-improvement gate (gain at least 0.05 and CI lower bound 
 | `sfhq_t2i` | `flux1_dev` | 0.314 | 0.435 |
 | `sfhq_t2i` | `flux1_pro` | 0.332 | 0.445 |
 | `sfhq_t2i` | `sdxl` | 0.362 | 0.489 |
+
+## Post-hoc notes (added after rendering)
+
+- The `sfhq_t2i` gain is not detection: E8 lifted FLUX.1 and SDXL fakes to the
+  score level of FFHQ reals, which is chance, and both models score real photos
+  from every non-FF++ source as more fake than FF++ reals. See
+  [real-source bias](real_source_bias.md); round 3 addresses it.
+- The E8 runs record training-source hash `063932e19a1c2a56`. It was computed
+  over CRLF copies of the sources; with carriage returns removed they are
+  identical to commit `c6d87a3`, whose LF sources hash to `067bcf9b99842986`.
+  The commit message of `c6d87a3` states the first hash as matching the commit
+  directly, which holds only up to line endings.

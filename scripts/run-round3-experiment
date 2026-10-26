@@ -1,0 +1,139 @@
+#!/usr/bin/env bash
+# Round 3 on xixi: finish the FairFace reconstructions, freeze the manifest, train
+# E9 on three seeds, apply the frozen development rule, and only then score fresh
+# v3 once. Needs the whole GPU: stop the resell bot's Ollama first.
+set -euo pipefail
+umask 0007
+project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$project_root"
+export PYTHONPATH="$project_root/src"
+python="${PYTHON:-$HOME/deepfake-detection/.venv/bin/python}"
+config=configs/training/openworld/e9_l14_round3.yaml
+selection=reports/openworld/round3_selection.json
+audit=reports/openworld/round3_audit.json
+fresh_v3=configs/evaluation/openworld_fresh_v3.yaml
+fresh_v2=configs/evaluation/openworld_fresh_v2.yaml
+art=artifacts/openworld
+seeds=(20261007 20261008 20261009)
+mkdir -p runtime/round3 "$art/fresh-v3" "$art/fresh-v2"
+
+used="$(nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits | head -n 1)"
+if (( used > 1500 )); then
+  echo "GPU already holds ${used} MiB; stop Ollama (sudo systemctl stop ollama) first" >&2
+  exit 3
+fi
+
+# Reconstructions are resumable; this finishes whatever the CPU run left.
+for autoencoder in movq dcae; do
+  HF_HUB_OFFLINE=1 PYTHONPATH=.genlibs:src "$python" scripts/generate_round2.py recon-files \
+    --autoencoder "$autoencoder" \
+    --selection data/subsets/df40/df40_openworld_round3/fairface_selection.json \
+    --pool "recon_$autoencoder" --source-root data/raw/round3_sources/fairface \
+    --output "data/raw/df40/downloads/round3_generated/recon_$autoencoder" --batch 8
+done
+if [[ ! -f "$config" ]]; then
+  scripts/rebuild-round3
+fi
+"$python" - <<'PY'
+import json
+from pathlib import Path
+
+if not json.loads(Path("reports/openworld/round3_audit.json").read_text())["passed"]:
+    raise SystemExit("Round 3 audit did not pass")
+PY
+
+e7_runs=(
+  "$art/clip_vit_l14-20261007-adf10611e74ccef2191d-b3d28c85-642ae400"
+  "$art/clip_vit_l14-20261008-adf10611e74ccef2191d-b3d28c85-24359c93"
+  "$art/clip_vit_l14-20261009-adf10611e74ccef2191d-b3d28c85-90a88076"
+)
+e8_runs=(
+  "$art/clip_vit_l14-20261007-8d03d7a1cc56f0a00e8c-d3bb2d65-03152b3f"
+  "$art/clip_vit_l14-20261008-8d03d7a1cc56f0a00e8c-d3bb2d65-9bc75790"
+  "$art/clip_vit_l14-20261009-8d03d7a1cc56f0a00e8c-d3bb2d65-e44c675e"
+)
+release_run=artifacts/benchmark/clip_vit_b16-20261006-07f906d9ef61a537efa8-8f3b95e2-a77f7ac7
+e9_runs=()
+for seed in "${seeds[@]}"; do
+  result="runtime/round3/e9-$seed.json"
+  if [[ ! -f "$result" ]]; then
+    log="runtime/round3/e9-$seed.log"
+    # Run as a module: Python 3.14 DataLoader workers re-import __main__.
+    "$python" -m deepfake_detection.train.openworld train --config "$config" --seed "$seed" \
+      | tee "$log"
+    # Epoch records are one-line JSON; the final result is the indented object.
+    LOG="$log" RESULT="$result" "$python" -c '
+import json, os
+from pathlib import Path
+text = "\n" + Path(os.environ["LOG"]).read_text()
+result = json.loads(text[text.rindex("\n{\n") + 1:])
+Path(os.environ["RESULT"]).write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")'
+  fi
+  run_dir="$(RESULT="$result" "$python" -c \
+    'import json,os; print(json.load(open(os.environ["RESULT"]))["run_dir"])')"
+  e9_runs+=("$run_dir")
+done
+
+selection_args=()
+for index in 0 1 2; do
+  selection_args+=(--baseline-run "${e8_runs[$index]}" --candidate-run "${e9_runs[$index]}")
+done
+if ! "$python" scripts/select_round3.py "${selection_args[@]}" --output "$selection"; then
+  "$python" scripts/render_round3_report.py --selection "$selection" --audit "$audit" \
+    --output reports/openworld/round3_result.md
+  echo "E9 did not advance; fresh v3 stays unscored"
+  exit 0
+fi
+
+# Fresh v3 is reached only after the development rule advances E9.
+score() {  # run_dir output evaluation_config
+  if [[ ! -f "$2/test_report.json" ]]; then
+    "$python" -m deepfake_detection.train.openworld score-manifest \
+      --run-dir "$1" --evaluation-config "$3" --output "$2"
+  fi
+}
+score "$release_run" "$art/fresh-v3/release-clip-b16" "$fresh_v3"
+comparison_args=(
+  --context-validation "release=$art/baseline-release-clip-b16/validation.jsonl"
+  --context-test "release=$art/fresh-v3/release-clip-b16/test.jsonl"
+)
+bias_args=(
+  --validation "release=$art/baseline-release-clip-b16/validation.jsonl"
+  --test "release=$art/fresh-v3/release-clip-b16/test.jsonl"
+)
+v2_args=()
+for index in 0 1 2; do
+  seed="${seeds[$index]}"
+  score "${e7_runs[$index]}" "$art/fresh-v3/e7-$seed" "$fresh_v3"
+  score "${e8_runs[$index]}" "$art/fresh-v3/e8-$seed" "$fresh_v3"
+  score "${e9_runs[$index]}" "$art/fresh-v3/e9-$seed" "$fresh_v3"
+  score "${e9_runs[$index]}" "$art/fresh-v2/e9-$seed" "$fresh_v2"
+  e7_validation="$art/round2-validation/e7-$seed/validation.jsonl"
+  comparison_args+=(
+    --baseline-validation "${e8_runs[$index]}/validation.jsonl"
+    --baseline-test "$art/fresh-v3/e8-$seed/test.jsonl"
+    --candidate-validation "${e9_runs[$index]}/validation.jsonl"
+    --candidate-test "$art/fresh-v3/e9-$seed/test.jsonl"
+    --context-validation "e7=$e7_validation" --context-test "e7=$art/fresh-v3/e7-$seed/test.jsonl"
+  )
+  bias_args+=(
+    --validation "e7=$e7_validation" --test "e7=$art/fresh-v3/e7-$seed/test.jsonl"
+    --validation "e8=${e8_runs[$index]}/validation.jsonl"
+    --test "e8=$art/fresh-v3/e8-$seed/test.jsonl"
+    --validation "e9=${e9_runs[$index]}/validation.jsonl"
+    --test "e9=$art/fresh-v3/e9-$seed/test.jsonl"
+  )
+  v2_args+=(--baseline "$art/fresh-v2/e8-$seed/test.jsonl"
+            --candidate "$art/fresh-v2/e9-$seed/test.jsonl")
+done
+"$python" scripts/compare_round3.py "${comparison_args[@]}" \
+  --output reports/openworld/round3_comparison.json
+"$python" scripts/compare_round2.py "${v2_args[@]}" \
+  --output reports/openworld/round3_fresh_v2_comparison.json > /dev/null
+"$python" -m deepfake_detection.train.source_bias "${bias_args[@]}" \
+  --output reports/openworld/real_source_bias_round3.json \
+  --markdown runtime/round3/real_source_bias_round3.md
+"$python" scripts/render_round3_report.py --selection "$selection" --audit "$audit" \
+  --comparison reports/openworld/round3_comparison.json \
+  --fresh-v2-comparison reports/openworld/round3_fresh_v2_comparison.json \
+  --output reports/openworld/round3_result.md
