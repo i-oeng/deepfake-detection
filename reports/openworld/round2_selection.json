@@ -1,0 +1,57 @@
+{
+  "advance_e8": true,
+  "baseline_e7": {
+    "domain_mean_auroc": {
+      "cdf": 0.9736953136317542,
+      "ff": 0.9911919191919192,
+      "stable_cascade_lite": 0.340198,
+      "stargan": 0.9838138138138138,
+      "styleclip": 0.9721501849983182,
+      "whichfaceisreal": 0.8867375000000001
+    },
+    "manifest_id": "8d03d7a1cc56f0a00e8c",
+    "original_v1_domain_mean": 0.961517746327161,
+    "reports": [
+      "artifacts/openworld/round2-validation/e7-20261007/validation_report.json",
+      "artifacts/openworld/round2-validation/e7-20261008/validation_report.json",
+      "artifacts/openworld/round2-validation/e7-20261009/validation_report.json"
+    ],
+    "score_max": 0.8602568631407674,
+    "score_mean": 0.8579644552726343,
+    "score_min": 0.8556971708799103,
+    "score_stdev": 0.0022799499490542934,
+    "seeds": 3
+  },
+  "candidate_e8": {
+    "domain_mean_auroc": {
+      "cdf": 0.9729640494471004,
+      "ff": 0.9827474747474746,
+      "stable_cascade_lite": 0.5182816666666666,
+      "stargan": 0.9853878878878879,
+      "styleclip": 0.9719468550285907,
+      "whichfaceisreal": 0.8856385000000001
+    },
+    "manifest_id": "8d03d7a1cc56f0a00e8c",
+    "original_v1_domain_mean": 0.9597369534222107,
+    "reports": [
+      "/home/xixi/dd-open/artifacts/openworld/clip_vit_l14-20261007-8d03d7a1cc56f0a00e8c-d3bb2d65-03152b3f/report.json",
+      "/home/xixi/dd-open/artifacts/openworld/clip_vit_l14-20261008-8d03d7a1cc56f0a00e8c-d3bb2d65-9bc75790/report.json",
+      "/home/xixi/dd-open/artifacts/openworld/clip_vit_l14-20261009-8d03d7a1cc56f0a00e8c-d3bb2d65-e44c675e/report.json"
+    ],
+    "score_max": 0.8869188363927156,
+    "score_mean": 0.8861610722962867,
+    "score_min": 0.8847915779619745,
+    "score_stdev": 0.0011882623955782267,
+    "seeds": 3
+  },
+  "ff_change": -0.008444444444444588,
+  "rule": {
+    "maximum_ff_auroc_drop": 0.01,
+    "mean_score_must_exceed_e7": true,
+    "tie_breakers": [
+      "stable_cascade_lite",
+      "original_v1_domain_mean"
+    ]
+  },
+  "score_gain": 0.028196617023652393
+}
