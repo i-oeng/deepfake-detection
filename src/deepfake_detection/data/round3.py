@@ -15,8 +15,11 @@ keeps every round 2 method and changes the real side only:
 FairFace (YFCC-100M Flickr photos, CC BY 4.0) appears in no earlier split. Only
 the adult age bins are used, matching the adult-only generation prompts. Every
 addition is pruned against the validation and test images it could leak into,
-including near-duplicates by perceptual hash, because FFHQ (validation and fresh
-v2 reals) is also drawn from Flickr.
+including near-duplicates, because FFHQ (validation and fresh v2 reals) is also
+drawn from Flickr. A 64-bit dHash cannot find those among aligned faces: the
+nearest unrelated evaluation face lies within 6 bits for a quarter of training
+images. Near-duplicates are instead found by the correlation of 32 x 32
+grayscale thumbnails, with the threshold set from unrelated images.
 """
 
 from __future__ import annotations
@@ -25,6 +28,7 @@ import argparse
 import hashlib
 import json
 from collections import Counter
+from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path, PurePosixPath
 
 from .manifest import verify_manifest
@@ -51,8 +55,10 @@ RECON_COUNTS = {"recon_movq": 2000, "recon_dcae": 2000}
 POOLS = {**T2I_COUNTS, **RECON_COUNTS}
 # Round 2 collections whose fakes round 3 re-pairs with FairFace photos.
 REPLACED_DOMAINS = frozenset({"round2_kandinsky22", "round2_sana600m"})
-# Perceptual-hash distance at or below which two images count as one.
-NEAR_DUPLICATE_BITS = 6
+THUMBNAIL_SIDE = 32
+# Thumbnail correlation at or above which two images count as one (calibrated in
+# reports/openworld/round3_protocol.md).
+NEAR_DUPLICATE_CORRELATION = 0.97
 
 
 def select_fairface(metadata: Path, output: Path, *, seed: str = SEED) -> dict:
@@ -193,36 +199,68 @@ def combine_additions(round2_additions: Path, round3_additions: Path, output: Pa
             "counts": {"/".join(key): value for key, value in sorted(counts.items())}}
 
 
-def _hash_array(values: list[str]):
+def thumbnail(path: str):
+    """A zero-mean, unit-norm 32 x 32 grayscale vector; dot products are correlations."""
+    import numpy as np
+    from PIL import Image
+
+    with Image.open(path) as image:
+        small = image.convert("L").resize((THUMBNAIL_SIDE, THUMBNAIL_SIDE),
+                                          Image.Resampling.BOX)
+    vector = np.asarray(small, dtype=np.float32).ravel()
+    vector -= vector.mean()
+    norm = float(np.linalg.norm(vector))
+    return vector / norm if norm else vector
+
+
+def thumbnails(paths: list[str], workers: int = 8):
     import numpy as np
 
-    return np.array([int(value, 16) for value in values], dtype=np.uint64)
+    if not paths:
+        return np.zeros((0, THUMBNAIL_SIDE * THUMBNAIL_SIDE), dtype=np.float32)
+    with ProcessPoolExecutor(workers) as pool:
+        return np.stack(list(pool.map(thumbnail, paths, chunksize=64)))
 
 
-def nearest_distances(queries: list[str], references: list[str], chunk: int = 512):
-    """Smallest Hamming distance from each 64-bit query hash to any reference hash."""
+def nearest_correlation(queries, references, chunk: int = 1024):
+    """Highest correlation of each query thumbnail with any reference thumbnail."""
     import numpy as np
 
-    query, reference = _hash_array(queries), _hash_array(references)
-    best = np.full(len(query), 64, dtype=np.int64)
-    if not len(reference):
-        return best
-    for start in range(0, len(query), chunk):
-        block = query[start:start + chunk, None] ^ reference[None, :]
-        best[start:start + chunk] = np.bitwise_count(block).min(axis=1)
-    return best
+    if not len(references):
+        return np.full(len(queries), -1.0, dtype=np.float32)
+    if not len(queries):
+        return np.zeros(0, dtype=np.float32)
+    return np.concatenate([(queries[start:start + chunk] @ references.T).max(axis=1)
+                           for start in range(0, len(queries), chunk)])
 
 
-def _evaluation_rows(manifest_dir: Path, reference_dirs: list[Path]) -> list[dict[str, str]]:
-    """Every row a model is scored on: non-train rows here and in each reference."""
-    rows = [row for row in _read_manifest(manifest_dir) if row["split"] != "train"]
-    for directory in reference_dirs:
-        rows += _read_manifest(directory)
+Reference = tuple[Path, Path]
+
+
+def _evaluation_rows(manifest_dir: Path, data_root: Path,
+                     references: list[Reference]) -> list[dict[str, str]]:
+    """Every row a model is scored on, with its image path in ``_path``.
+
+    These are the non-train rows of ``manifest_dir`` and all rows of each
+    reference (test-only) manifest.
+    """
+    rows = [{**row, "_path": str(data_root / row["relative_path"])}
+            for row in _read_manifest(manifest_dir) if row["split"] != "train"]
+    for directory, root in references:
+        rows += [{**row, "_path": str(root / row["relative_path"])}
+                 for row in _read_manifest(directory)]
     return rows
 
 
-def prune_evaluation_overlaps(catalog: Path, manifest_dir: Path, reference_dirs: list[Path],
-                              output: Path, *, bits: int = NEAR_DUPLICATE_BITS) -> dict:
+def _histogram(values) -> dict[str, int]:
+    edges = (0.8, 0.85, 0.9, 0.93, 0.95, 0.97, 0.98, 0.99)
+    return {f">={edge}": int((values >= edge).sum()) for edge in edges}
+
+
+def prune_evaluation_overlaps(catalog: Path, manifest_dir: Path, data_root: Path,
+                              references: list[Reference], output: Path, *,
+                              threshold: float = NEAR_DUPLICATE_CORRELATION,
+                              workers: int = 8) -> dict:
     """Remove addition groups that match any evaluation image exactly or nearly.
 
     ``manifest_dir`` is a preliminary round 3 build that supplies fingerprints after
@@ -230,7 +268,7 @@ def prune_evaluation_overlaps(catalog: Path, manifest_dir: Path, reference_dirs:
     reference (test-only) manifests, are evaluation images. A whole video group goes
     when any of its images matches, so a reconstruction leaves with its real.
     """
-    for directory in (manifest_dir, *reference_dirs):
+    for directory in (manifest_dir, *(directory for directory, _ in references)):
         valid, errors = verify_manifest(directory)
         if not valid:
             raise ValueError(f"invalid immutable manifest {directory}: {errors}")
@@ -238,39 +276,39 @@ def prune_evaluation_overlaps(catalog: Path, manifest_dir: Path, reference_dirs:
     by_source = {row["source_id"]: row for row in _read_manifest(manifest_dir)}
     if not {row["image_id"] for row in additions} <= set(by_source):
         raise ValueError("preliminary manifest does not cover the additions")
-    evaluation = _evaluation_rows(manifest_dir, reference_dirs)
-    reserved = {column: {row[column] for row in evaluation if row[column]}
-                for column in FINGERPRINTS}
     fingerprinted = [by_source[row["image_id"]] for row in additions]
     if any(row["status"] != "ok" for row in fingerprinted):
         raise ValueError("an addition failed decoding")
-    distances = nearest_distances([row["dhash64"] for row in fingerprinted],
-                                  [row["dhash64"] for row in evaluation])
+    evaluation = _evaluation_rows(manifest_dir, data_root, references)
+    reserved = {column: {row[column] for row in evaluation if row[column]}
+                for column in FINGERPRINTS}
+    correlation = nearest_correlation(
+        thumbnails([str(data_root / row["relative_path"]) for row in fingerprinted], workers),
+        thumbnails([row["_path"] for row in evaluation], workers))
     hits: Counter[str] = Counter()
     remove: set[tuple[str, str]] = set()
-    for row, fingerprint, distance in zip(additions, fingerprinted, distances, strict=True):
+    for row, fingerprint, value in zip(additions, fingerprinted, correlation, strict=True):
         exact = [column for column in FINGERPRINTS if fingerprint[column] in reserved[column]]
-        if exact or distance <= bits:
-            hits[exact[0] if exact else "dhash_near"] += 1
+        if exact or value >= threshold:
+            hits[exact[0] if exact else "thumbnail_correlation"] += 1
             remove.add((row["split"], row["video_id"]))
     kept = [row for row in additions if (row["split"], row["video_id"]) not in remove]
     _write_catalog(output, kept)
     return {"catalog": str(output), "rows": len(kept), "removed_rows": len(additions) - len(kept),
             "removed_video_groups": len(remove), "hits": dict(sorted(hits.items())),
-            "near_duplicate_bits": bits,
-            "distance_histogram": {str(value): int((distances == value).sum())
-                                   for value in range(0, 17)},
-            "references": [directory.name for directory in reference_dirs],
+            "near_duplicate_correlation": threshold,
+            "nearest_correlation_counts": _histogram(correlation),
+            "references": [directory.name for directory, _ in references],
             "sha256": hashlib.sha256(output.read_bytes()).hexdigest()}
 
 
-def audit(manifest_dir: Path, base_dir: Path, reference_dirs: list[Path], *,
-          bits: int = NEAR_DUPLICATE_BITS) -> dict:
+def audit(manifest_dir: Path, data_root: Path, base_dir: Path, references: list[Reference], *,
+          threshold: float = NEAR_DUPLICATE_CORRELATION, workers: int = 8) -> dict:
     """Lineage audit of the round 3 manifest and separation of its training rows."""
     rows = _read_manifest(manifest_dir)
     base_ids = {row["source_id"] for row in _read_manifest(base_dir)}
     training = [row for row in rows if row["split"] == "train"]
-    evaluation = _evaluation_rows(manifest_dir, reference_dirs)
+    evaluation = _evaluation_rows(manifest_dir, data_root, references)
     failures, overlap = [], {}
     for column in FINGERPRINTS:
         reserved = {row[column] for row in evaluation if row[column]}
@@ -279,11 +317,13 @@ def audit(manifest_dir: Path, base_dir: Path, reference_dirs: list[Path], *,
         if found:
             failures.append(f"{len(found)} training {column} values occur in evaluation")
     additions = [row for row in training if row["source_id"] not in base_ids]
-    distances = nearest_distances([row["dhash64"] for row in additions],
-                                  [row["dhash64"] for row in evaluation])
-    near = int((distances <= bits).sum())
+    correlation = nearest_correlation(
+        thumbnails([str(data_root / row["relative_path"]) for row in additions], workers),
+        thumbnails([row["_path"] for row in evaluation], workers))
+    near = int((correlation >= threshold).sum())
     if near:
-        failures.append(f"{near} additions are within {bits} bits of an evaluation image")
+        failures.append(f"{near} additions correlate with an evaluation image at "
+                        f">= {threshold}")
     parents = {value for row in evaluation
                for value in row["lineage_video_ids"].split("|") if value}
     shared = sorted({value for row in additions
@@ -297,9 +337,9 @@ def audit(manifest_dir: Path, base_dir: Path, reference_dirs: list[Path], *,
                          for row in training if row["label"] == "REAL")
     return {"passed": not failures, "failures": sorted(set(failures)),
             "round3_manifest_id": manifest_dir.name, "base_manifest_id": base_dir.name,
-            "reference_manifest_ids": [directory.name for directory in reference_dirs],
-            "addition_rows": len(additions), "near_duplicate_bits": bits,
-            "additions_within_bits": near, "overlap": overlap,
+            "reference_manifest_ids": [directory.name for directory, _ in references],
+            "addition_rows": len(additions), "near_duplicate_correlation": threshold,
+            "nearest_correlation_counts": _histogram(correlation), "overlap": overlap,
             "training_real_namespaces": dict(sorted(namespaces.items())),
             "lineage_audit": lineage}
 
@@ -340,14 +380,15 @@ def main(argv: list[str] | None = None) -> int:
     combine.add_argument("--output", type=Path, required=True)
     prune = commands.add_parser("prune")
     prune.add_argument("--catalog", type=Path, required=True)
-    prune.add_argument("--manifest-dir", type=Path, required=True)
-    prune.add_argument("--reference-dir", type=Path, action="append", required=True)
-    prune.add_argument("--output", type=Path, required=True)
     check = commands.add_parser("audit")
-    check.add_argument("--manifest-dir", type=Path, required=True)
     check.add_argument("--base-manifest-dir", type=Path, required=True)
-    check.add_argument("--reference-dir", type=Path, action="append", required=True)
-    check.add_argument("--output", type=Path, required=True)
+    for command in (prune, check):
+        command.add_argument("--manifest-dir", type=Path, required=True)
+        command.add_argument("--data-root", type=Path, required=True)
+        command.add_argument("--reference", nargs=2, type=Path, action="append", required=True,
+                             metavar=("MANIFEST_DIR", "DATA_ROOT"))
+        command.add_argument("--workers", type=int, default=8)
+        command.add_argument("--output", type=Path, required=True)
     freeze = commands.add_parser("freeze-config")
     freeze.add_argument("--base-config", type=Path, required=True)
     freeze.add_argument("--manifest-dir", type=Path, required=True)
@@ -361,10 +402,12 @@ def main(argv: list[str] | None = None) -> int:
     elif args.command == "combine":
         result = combine_additions(args.round2_additions, args.round3_additions, args.output)
     elif args.command == "prune":
-        result = prune_evaluation_overlaps(args.catalog, args.manifest_dir, args.reference_dir,
-                                           args.output)
+        result = prune_evaluation_overlaps(args.catalog, args.manifest_dir, args.data_root,
+                                           [tuple(pair) for pair in args.reference],
+                                           args.output, workers=args.workers)
     elif args.command == "audit":
-        result = audit(args.manifest_dir, args.base_manifest_dir, args.reference_dir)
+        result = audit(args.manifest_dir, args.data_root, args.base_manifest_dir,
+                       [tuple(pair) for pair in args.reference], workers=args.workers)
         _write_json(args.output, result)
     else:
         result = freeze_training_config(args.base_config, args.manifest_dir, args.output)

@@ -122,8 +122,19 @@ def test_combine_drops_only_the_replaced_round2_pairings(tmp_path):
         "round2_recon_movq", "round3_kandinsky22"}
 
 
-def test_nearest_distances_counts_differing_bits():
-    distances = round3.nearest_distances(["ffff000000000000", "0000000000000000"],
-                                         ["ffff000000000001", "00000000000000ff"])
-    assert distances.tolist() == [1, 8]
-    assert round3.nearest_distances(["0000000000000000"], []).tolist() == [64]
+def test_thumbnail_correlation_finds_recompressed_copies_only(tmp_path):
+    np = pytest.importorskip("numpy")
+    from PIL import Image
+
+    rng = np.random.default_rng(0)
+    # Smooth random images, so a resized JPEG copy keeps their structure.
+    original = Image.fromarray(rng.integers(0, 255, (12, 12, 3), dtype=np.uint8)).resize((96, 96))
+    other = Image.fromarray(rng.integers(0, 255, (12, 12, 3), dtype=np.uint8)).resize((96, 96))
+    original.save(tmp_path / "a.png")
+    original.resize((80, 80)).save(tmp_path / "a_copy.jpg", quality=70)
+    other.save(tmp_path / "b.png")
+    queries = np.stack([round3.thumbnail(str(tmp_path / "a_copy.jpg"))])
+    references = np.stack([round3.thumbnail(str(tmp_path / name)) for name in ("a.png", "b.png")])
+    assert round3.nearest_correlation(queries, references)[0] > 0.97
+    assert float(queries[0] @ references[1]) < 0.5
+    assert round3.nearest_correlation(queries, references[:0]).tolist() == [-1.0]

@@ -16,6 +16,7 @@ import json
 import math
 import random
 import shutil
+from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
@@ -30,6 +31,7 @@ from torchvision import transforms
 from deepfake_detection.data.config import find_project_root
 from deepfake_detection.data.openworld import (
     PROTOCOL_ROUND2,
+    PROTOCOL_ROUND3,
     PROTOCOL_V1,
     method_roles,
 )
@@ -47,7 +49,7 @@ from .evaluation import report as domain_report
 from .loop import _seed_worker
 from .sbi import self_blend
 
-PROTOCOLS = frozenset((PROTOCOL_V1, PROTOCOL_ROUND2))
+PROTOCOLS = frozenset((PROTOCOL_V1, PROTOCOL_ROUND2, PROTOCOL_ROUND3))
 CLIP_REPOSITORIES = {
     "clip_vit_b16": "openai/clip-vit-base-patch16",
     "clip_vit_l14": "openai/clip-vit-large-patch14",
@@ -211,6 +213,52 @@ def with_pseudo_fakes(rows: list[dict[str, str]], share: float) -> tuple[list, l
     return combined, weights
 
 
+def lineage_namespace(row: dict[str, str]) -> str:
+    """Source collection of a sample: the prefix of its first lineage unit.
+
+    FF++ frames and their reconstructions carry ``ff:<clip>``; FairFace photos and
+    their reconstructions carry ``fairface:<id>``.
+    """
+    return row.get("lineage_video_ids", "").split("|")[0].split(":", 1)[0]
+
+
+def balance_namespaces(rows: list[dict[str, str]], weights: list[float], select) -> list[float]:
+    """Give each lineage namespace an equal share of the selected rows' sampling mass.
+
+    The selected rows keep their total mass and, within a namespace, their relative
+    weights. Without this, single-image photo groups outnumber FF++ clips and take
+    almost all of the real mass, because sampling_weights splits it by video.
+    """
+    chosen = [index for index, row in enumerate(rows) if select(row)]
+    mass: dict[str, float] = defaultdict(float)
+    for index in chosen:
+        mass[lineage_namespace(rows[index])] += weights[index]
+    total = sum(mass.values())
+    balanced = list(weights)
+    for index in chosen:
+        share = mass[lineage_namespace(rows[index])]
+        balanced[index] = weights[index] * total / (len(mass) * share)
+    return balanced
+
+
+def sampling_plan(rows: list[dict[str, str]], config: dict) -> tuple[list, list[float], dict]:
+    """Training rows with self-blends, their sampling weights, and the mass per source."""
+    rows, weights = with_pseudo_fakes(rows, float(config.get("sbi_share", 0.0)))
+    balance = config.get("real_balance")
+    if balance == "lineage_namespace":
+        # Self-blends derive from reals, so their namespaces are balanced the same way.
+        weights = balance_namespaces(rows, weights, lambda row: row["label"] == "REAL")
+        weights = balance_namespaces(rows, weights, lambda row: bool(row.get("_sbi")))
+    elif balance is not None:
+        raise ValueError(f"unknown real_balance: {balance}")
+    total = sum(weights)
+    mass: dict[str, float] = defaultdict(float)
+    for row, weight in zip(rows, weights, strict=True):
+        kind = "sbi" if row.get("_sbi") else row["label"].lower()
+        mass[f"{kind}/{lineage_namespace(row)}"] += weight / total
+    return rows, weights, dict(sorted(mass.items()))
+
+
 def alignment_uniformity(features: torch.Tensor, labels: torch.Tensor) -> tuple:
     """Wang and Isola's alignment (same-class pairs) and uniformity on the hypersphere."""
     unit = F.normalize(features.float(), dim=-1)
@@ -249,9 +297,16 @@ def predict(model: nn.Module, rows: list[dict[str, str]], config: dict,
 
 
 def open_world_report(records: list[dict]) -> dict:
-    """Per-domain macro video AUROC and their unweighted mean (the selection score)."""
+    """Per-domain macro video AUROC and their unweighted mean (the selection score).
+
+    A domain with one class only, such as a real-only false-positive source, has no
+    AUROC; it is listed under ``single_class_domains`` and left out of the mean.
+    """
+    labels: dict[str, set[int]] = defaultdict(set)
+    for row in records:
+        labels[row["source_domain"]].add(int(row["label"]))
     domains = {domain: domain_report(records, domain=domain)
-               for domain in sorted({row["source_domain"] for row in records})}
+               for domain in sorted(labels) if labels[domain] == {0, 1}}
     families: dict[str, list[float]] = {}
     for result in domains.values():
         for method, values in result["by_method"].items():
@@ -265,6 +320,7 @@ def open_world_report(records: list[dict]) -> dict:
         "family_mean_auroc": {name: sum(values) / len(values) for name, values in
                               sorted(families.items())},
         "domains": domains,
+        "single_class_domains": sorted(set(labels) - set(domains)),
     }
 
 
@@ -358,7 +414,8 @@ def train(config_path: Path, *, seed: int | None = None) -> dict:
     (directory / "audit.json").write_text(json.dumps(audit, indent=2, sort_keys=True) + "\n")
     snapshot_sources(root, directory, source_files)
 
-    train_rows, weights = with_pseudo_fakes(splits["train"], float(config.get("sbi_share", 0.0)))
+    train_rows, weights, sampling_mass = sampling_plan(splits["train"], config)
+    print(json.dumps({"sampling_mass": sampling_mass}), flush=True)
     dataset = Images(train_rows, training=True, strength=str(config.get("augment", "base")))
     batch_size = int(config["batch_size"])
     steps_per_epoch = int(config["samples_per_epoch"]) // batch_size
@@ -432,7 +489,7 @@ def train(config_path: Path, *, seed: int | None = None) -> dict:
         "source_sha256": source_sha256,
         "manifest_id": config["manifest_id"], "manifest_sha256": config["manifest_sha256"],
         "checkpoint_sha256": sha256_file(directory / "best.pt"),
-        "best_epoch": best_epoch, "history": history,
+        "best_epoch": best_epoch, "history": history, "sampling_mass": sampling_mass,
         "validation": open_world_report(records),
         "torch_version": torch.__version__,
         "gpu": torch.cuda.get_device_name(0) if device.type == "cuda" else None,
