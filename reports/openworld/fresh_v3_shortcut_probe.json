@@ -1,0 +1,22 @@
+{
+  "test/openfake": {
+    "fake": 946,
+    "high_frequency_ratio": 0.5103,
+    "images": 1400,
+    "jpeg75_bytes": 0.5601,
+    "laplacian_variance": 0.5515,
+    "luma_std": 0.5319,
+    "max": 0.5601,
+    "saturation": 0.5469
+  },
+  "test/openfake_reddit": {
+    "fake": 383,
+    "high_frequency_ratio": 0.7215,
+    "images": 423,
+    "jpeg75_bytes": 0.5383,
+    "laplacian_variance": 0.601,
+    "luma_std": 0.5102,
+    "max": 0.7215,
+    "saturation": 0.6839
+  }
+}
