@@ -69,6 +69,9 @@ def main(argv: list[str] | None = None) -> int:
     result = {}
     for (split, domain), items in sorted(grouped.items()):
         labels = [label for label, _ in items]
+        if len(set(labels)) < 2:
+            # A real-only false-positive source has nothing to separate.
+            continue
         separability = {}
         for name in STATISTICS:
             area = auroc(labels, [value[name] for _, value in items])

@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# Build the fresh open-world test set (v3): catalog, materialize, manifest, drop
+# round 2 duplicates, final manifest, shortcut probe, evaluation config. Sources
+# come from scripts/download_round3_sources.py; each step writes
+# runtime/fresh3_<n>_<step>.json.
+set -euo pipefail
+umask 0007
+project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$project_root"
+export PYTHONPATH="$project_root/src"
+python="${PYTHON:-$HOME/deepfake-detection/.venv/bin/python}"
+workers="${WORKERS:-8}"
+subset=data/subsets/openworld_fresh_v3
+reference=data/manifests/df40_openworld_round2/8d03d7a1cc56f0a00e8c
+mkdir -p runtime "$subset"
+
+"$python" -m deepfake_detection.data.fresh_v3 catalog \
+  --downloads-root data/raw --output "$subset/catalog_selected.csv" --seed 20261027 \
+  > runtime/fresh3_1_catalog.json
+"$python" -m deepfake_detection.data.openworld materialize \
+  --catalog "$subset/catalog_selected.csv" --downloads-root data/raw \
+  --data-root data/raw/fresh_v3_images --output "$subset/catalog_materialized.csv" \
+  --workers "$workers" --size-at-original-resolution > runtime/fresh3_2_materialize.json
+# The dataset config reads catalog.csv: first all rows, then rows without round 2 matches.
+cp "$subset/catalog_materialized.csv" "$subset/catalog.csv"
+"$python" -m deepfake_detection.data.cli build \
+  --config configs/datasets/openworld_fresh_v3.yaml > runtime/fresh3_3_manifest_unfiltered.json
+unfiltered="$("$python" -c \
+  "import json; print(json.load(open('runtime/fresh3_3_manifest_unfiltered.json'))['manifest'])")"
+"$python" -m deepfake_detection.data.fresh drop-reference-matches \
+  --catalog "$subset/catalog_materialized.csv" --manifest-dir "$(dirname "$unfiltered")" \
+  --reference-dir "$reference" --output "$subset/catalog.csv" > runtime/fresh3_4_dedup.json
+"$python" -m deepfake_detection.data.cli build \
+  --config configs/datasets/openworld_fresh_v3.yaml > runtime/fresh3_5_manifest.json
+final="$("$python" -c \
+  "import json; print(json.load(open('runtime/fresh3_5_manifest.json'))['manifest'])")"
+"$python" scripts/shortcut_probe.py --manifest "$final" --data-root data/raw/fresh_v3_images \
+  --splits test --output reports/openworld/fresh_v3_shortcut_probe.json --workers "$workers"
+FINAL="$final" "$python" - <<'PY'
+import hashlib
+import os
+from pathlib import Path
+
+manifest = Path(os.environ["FINAL"])
+digest = hashlib.sha256(manifest.read_bytes()).hexdigest()
+Path("configs/evaluation/openworld_fresh_v3.yaml").write_text(f"""evaluation:
+  # Fresh test-only set for round 3 (reports/openworld/round3_protocol.md). Score
+  # each finalist once with `deepfake_detection.train.openworld score-manifest`.
+  name: openworld_fresh_v3
+  manifest_dir: data/manifests/openworld_fresh_v3/{manifest.parent.name}
+  manifest_id: {manifest.parent.name}
+  manifest_sha256: {digest}
+  data_root: data/raw/fresh_v3_images
+  require_cuda: true
+  batch_size: 32
+  workers: 8
+""", encoding="utf-8")
+PY
+echo "fresh v3 test set rebuilt: $final"
