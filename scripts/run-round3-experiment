@@ -29,7 +29,7 @@ for autoencoder in movq dcae; do
     --autoencoder "$autoencoder" \
     --selection data/subsets/df40/df40_openworld_round3/fairface_selection.json \
     --pool "recon_$autoencoder" --source-root data/raw/round3_sources/fairface \
-    --output "data/raw/df40/downloads/round3_generated/recon_$autoencoder" --batch 8
+    --output "data/raw/df40/downloads/round3_generated/recon_$autoencoder" --batch 4
 done
 if [[ ! -f "$config" ]]; then
   scripts/rebuild-round3
