@@ -9,6 +9,8 @@ and their autoencoders):
 - ``stable_cascade_lite`` (validation): Stable Cascade lite prior and decoder.
 - ``recon`` (train): FF++ training reals passed through MoVQ or DC-AE, giving
   pixel-aligned fakes that differ from their reals only in autoencoder traces.
+- ``recon-files`` (round 3 train): the same round trip for an explicit pool of
+  source photos, such as the FairFace reals selected by ``data.round3``.
 
 Outputs are resumable: an index whose PNG exists is skipped. Run with the
 isolated diffusers install: ``PYTHONPATH=.genlibs:src``.
@@ -487,15 +489,69 @@ def _load_rgb(path: str):
         return np.asarray(image.convert("RGB"), dtype=np.float32).copy()
 
 
-def reconstruct(autoencoder: str, manifest: Path, data_root: Path, output: Path, count: int,
-                seed: str, batch: int) -> None:
-    """Encode and decode FF++ training reals; outputs mirror the source relative path."""
+def _autoencoder_source(autoencoder: str) -> tuple[str, str]:
     if autoencoder == "movq":
-        model_name, revision = KANDINSKY_DECODER
-    elif autoencoder == "dcae":
-        model_name, revision = SANA
+        return KANDINSKY_DECODER
+    if autoencoder == "dcae":
+        return SANA
+    raise ValueError(f"unknown autoencoder: {autoencoder}")
+
+
+def _load_roundtrip(autoencoder: str, device: str):
+    """Load one autoencoder and return its encode-decode function on ``device``."""
+    import torch
+
+    model_name, revision = _autoencoder_source(autoencoder)
+    if autoencoder == "movq":
+        from diffusers import VQModel
+
+        model = VQModel.from_pretrained(
+            model_name, subfolder="movq", revision=revision, torch_dtype=torch.float32
+        ).to(device)
+
+        def roundtrip(pixels: torch.Tensor) -> torch.Tensor:
+            # The Kandinsky decoder pipeline decodes unquantized latents.
+            return model.decode(model.encode(pixels).latents, force_not_quantize=True).sample
     else:
-        raise ValueError(f"unknown autoencoder: {autoencoder}")
+        from diffusers import AutoencoderDC
+
+        model = AutoencoderDC.from_pretrained(
+            model_name, subfolder="vae", revision=revision, variant="fp16",
+            torch_dtype=torch.float32,
+        ).to(device)
+
+        def roundtrip(pixels: torch.Tensor) -> torch.Tensor:
+            return model.decode(model.encode(pixels).latent).sample
+    model.eval()
+    return roundtrip
+
+
+def _roundtrip_batch(roundtrip, paths: list[str], device: str):
+    """Reconstruct same-sized RGB files and return uint8 HWC arrays."""
+    import numpy as np
+    import torch
+
+    arrays = [_load_rgb(path) for path in paths]
+    shapes = {array.shape for array in arrays}
+    if len(shapes) != 1:
+        raise ValueError(f"reconstruction batch has mixed image shapes: {sorted(shapes)}")
+    pixels = torch.from_numpy(np.stack(arrays)).permute(0, 3, 1, 2).to(device) / 127.5 - 1
+    with torch.inference_mode():
+        decoded = roundtrip(pixels).clamp(-1, 1)
+    return ((decoded + 1) * 127.5).round().byte().permute(0, 2, 3, 1).cpu().numpy()
+
+
+def _save_png(image, target: Path) -> None:
+    target.parent.mkdir(parents=True, exist_ok=True)
+    temporary = target.with_name(f"{target.name}.part")
+    Image.fromarray(image).save(temporary, format="PNG")
+    temporary.replace(target)
+
+
+def reconstruct(autoencoder: str, manifest: Path, data_root: Path, output: Path, count: int,
+                seed: str, batch: int, device: str = "cuda") -> None:
+    """Encode and decode FF++ training reals; outputs mirror the source relative path."""
+    model_name, revision = _autoencoder_source(autoencoder)
     _ensure_provenance(output, {
         "schema_version": SCHEMA_VERSION, "kind": "reconstruction",
         "autoencoder": autoencoder, "model": model_name, "revision": revision,
@@ -511,50 +567,75 @@ def reconstruct(autoencoder: str, manifest: Path, data_root: Path, output: Path,
     ]
     if not pending:
         return
-    import numpy as np
-    import torch
-
-    if autoencoder == "movq":
-        from diffusers import VQModel
-
-        model = VQModel.from_pretrained(
-            model_name, subfolder="movq", revision=revision, torch_dtype=torch.float32
-        ).to("cuda")
-
-        def roundtrip(pixels: torch.Tensor) -> torch.Tensor:
-            # The Kandinsky decoder pipeline decodes unquantized latents.
-            return model.decode(model.encode(pixels).latents, force_not_quantize=True).sample
-    else:
-        from diffusers import AutoencoderDC
-
-        model = AutoencoderDC.from_pretrained(
-            model_name, subfolder="vae", revision=revision, variant="fp16",
-            torch_dtype=torch.float32,
-        ).to("cuda")
-
-        def roundtrip(pixels: torch.Tensor) -> torch.Tensor:
-            return model.decode(model.encode(pixels).latent).sample
-    model.eval()
+    roundtrip = _load_roundtrip(autoencoder, device)
     for start in range(0, len(pending), batch):
         chunk = pending[start:start + batch]
-        arrays = [_load_rgb(row["_path"]) for row in chunk]
-        shapes = {array.shape for array in arrays}
-        if len(shapes) != 1:
-            raise ValueError(f"reconstruction batch has mixed image shapes: {sorted(shapes)}")
-        pixels = torch.from_numpy(np.stack(arrays)).permute(0, 3, 1, 2).to("cuda") / 127.5 - 1
-        with torch.inference_mode():
-            decoded = roundtrip(pixels).clamp(-1, 1)
-        images = ((decoded + 1) * 127.5).round().byte().permute(0, 2, 3, 1).cpu().numpy()
+        images = _roundtrip_batch(roundtrip, [row["_path"] for row in chunk], device)
         for row, image in zip(chunk, images, strict=True):
             relative = PurePosixPath(row["relative_path"]).with_suffix(".png")
-            target = output.joinpath(*relative.parts)
-            target.parent.mkdir(parents=True, exist_ok=True)
-            temporary = target.with_name(f"{target.name}.part")
-            Image.fromarray(image).save(temporary, format="PNG")
-            temporary.replace(target)
+            _save_png(image, output.joinpath(*relative.parts))
             record = _recon_record(autoencoder, seed, row, revision, model_name)
             records[record["output"]] = record
         _write_records(output / "metadata.jsonl", records, "output")
+
+
+def _pool_record(autoencoder: str, seed: str, entry: dict, revision: str, model: str) -> dict:
+    return {
+        "autoencoder": autoencoder,
+        "autoencoder_model": model,
+        "generator": f"recon_{autoencoder}",
+        "revision": revision,
+        "seed": seed,
+        "source_id": entry["id"],
+        "source_file": entry["file"],
+        "output": PurePosixPath(entry["file"]).with_suffix(".png").as_posix(),
+    }
+
+
+def reconstruct_pool(autoencoder: str, selection: Path, pool: str, source_root: Path,
+                     output: Path, batch: int, device: str = "cuda") -> None:
+    """Encode and decode one selected pool of source photos, mirroring their paths."""
+    model_name, revision = _autoencoder_source(autoencoder)
+    spec = json.loads(selection.read_text(encoding="utf-8"))
+    entries = spec["pools"][pool]
+    seed = spec["seed"]
+    _ensure_provenance(output, {
+        "schema_version": SCHEMA_VERSION, "kind": "reconstruction",
+        "autoencoder": autoencoder, "model": model_name, "revision": revision,
+        "seed": seed, "count": len(entries), "pool": pool,
+        "selection_sha256": _sha256(selection),
+    })
+    expected = {}
+    for entry in entries:
+        relative = PurePosixPath(entry["file"])
+        if relative.is_absolute() or ".." in relative.parts:
+            raise ValueError(f"unsafe source file: {relative}")
+        record = _pool_record(autoencoder, seed, entry, revision, model_name)
+        expected[record["output"]] = record
+    path = output / "metadata.jsonl"
+    records = _read_records(path, "output")
+    for relative, record in records.items():
+        if expected.get(relative) != record:
+            raise ValueError(f"reconstruction metadata differs for {relative!r}")
+    pending = [record for relative, record in expected.items()
+               if not output.joinpath(*PurePosixPath(relative).parts).is_file()]
+    for relative, record in expected.items():
+        if relative not in records and record not in pending:
+            records[relative] = record
+    _write_records(path, records, "output")
+    if not pending:
+        return
+    roundtrip = _load_roundtrip(autoencoder, device)
+    for start in range(0, len(pending), batch):
+        chunk = pending[start:start + batch]
+        sources = [str(source_root.joinpath(*PurePosixPath(record["source_file"]).parts))
+                   for record in chunk]
+        images = _roundtrip_batch(roundtrip, sources, device)
+        for record, image in zip(chunk, images, strict=True):
+            _save_png(image, output.joinpath(*PurePosixPath(record["output"]).parts))
+            records[record["output"]] = record
+        _write_records(path, records, "output")
+        print(f"recon_{autoencoder} {pool}: {len(records)}/{len(expected)}", flush=True)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -571,8 +652,17 @@ def main(argv: list[str] | None = None) -> int:
     recon.add_argument("--data-root", type=Path, required=True)
     recon.add_argument("--count", type=_positive_int, required=True)
     recon.add_argument("--batch", type=_positive_int, default=16)
-    for command in (t2i, recon):
+    pool = commands.add_parser("recon-files")
+    pool.add_argument("--autoencoder", choices=("movq", "dcae"), required=True)
+    pool.add_argument("--selection", type=Path, required=True)
+    pool.add_argument("--pool", required=True)
+    pool.add_argument("--source-root", type=Path, required=True)
+    pool.add_argument("--batch", type=_positive_int, default=8)
+    for command in (recon, pool):
+        command.add_argument("--device", default="cuda")
+    for command in (t2i, recon, pool):
         command.add_argument("--output", type=Path, required=True)
+    for command in (t2i, recon):
         command.add_argument("--seed", default="round2-20261008")
     args = parser.parse_args(argv)
     args.output.mkdir(parents=True, exist_ok=True)
@@ -580,9 +670,12 @@ def main(argv: list[str] | None = None) -> int:
         {"kandinsky22": generate_kandinsky, "sana600m": generate_sana,
          "stable_cascade_lite": generate_cascade}[args.generator](
             args.output, args.count, args.seed, args.batch)
-    else:
+    elif args.command == "recon":
         reconstruct(args.autoencoder, args.manifest, args.data_root, args.output, args.count,
-                    args.seed, args.batch)
+                    args.seed, args.batch, args.device)
+    else:
+        reconstruct_pool(args.autoencoder, args.selection, args.pool, args.source_root,
+                         args.output, args.batch, args.device)
     return 0
 
 

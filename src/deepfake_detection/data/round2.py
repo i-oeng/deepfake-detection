@@ -365,18 +365,26 @@ def prune_fresh_overlaps(
     }
 
 
-def freeze_training_config(base_config: Path, manifest_dir: Path, output: Path) -> dict:
-    """Pin the E7 recipe to the immutable Round 2 manifest as E8."""
+def freeze_training_config(
+    base_config: Path, manifest_dir: Path, output: Path, *,
+    inherit: str = PROTOCOL_V1, protocol: str = PROTOCOL_ROUND2,
+    settings: dict | None = None,
+) -> dict:
+    """Pin the E7 recipe to the immutable Round 2 manifest as E8.
+
+    Later rounds pass the protocol they inherit from, their own protocol, and any
+    recipe settings they add; the defaults reproduce the Round 2 config.
+    """
     valid, errors = verify_manifest(manifest_dir)
     if not valid:
-        raise ValueError(f"invalid Round 2 manifest: {errors}")
+        raise ValueError(f"invalid {protocol} manifest: {errors}")
     metadata = json.loads((manifest_dir / "manifest.json").read_text(encoding="utf-8"))
     source = yaml.safe_load(base_config.read_text(encoding="utf-8"))
     if not isinstance(source, dict) or not isinstance(source.get("experiment"), dict):
         raise ValueError("base config needs an experiment mapping")
     experiment = dict(source["experiment"])
-    if experiment.get("protocol") != PROTOCOL_V1:
-        raise ValueError("Round 2 must inherit a v1 open-world recipe")
+    if experiment.get("protocol") != inherit:
+        raise ValueError(f"{protocol} must inherit a {inherit} recipe")
     project_root = find_project_root(output.resolve().parent)
     resolved_manifest = manifest_dir.resolve()
     try:
@@ -394,10 +402,11 @@ def freeze_training_config(base_config: Path, manifest_dir: Path, output: Path) 
             ) from error
         relative_manifest = linked.relative_to(project_root).as_posix()
     experiment.update({
-        "protocol": PROTOCOL_ROUND2,
+        "protocol": protocol,
         "manifest_dir": relative_manifest,
         "manifest_id": metadata["manifest_id"],
         "manifest_sha256": metadata["manifest_sha256"],
+        **(settings or {}),
     })
     payload = yaml.safe_dump({"experiment": experiment}, sort_keys=False)
     if output.exists() and output.read_text(encoding="utf-8") != payload:

@@ -31,6 +31,8 @@ FS, FR, EFS, FE = "face_swap", "face_reenactment", "entire_face_synthesis", "fac
 SPLITS = ("train", "validation", "test")
 PROTOCOL_V1 = "df40_openworld_v1"
 PROTOCOL_ROUND2 = "df40_openworld_round2"
+# Round 3 keeps round 2's methods and changes which real photos they are paired with.
+PROTOCOL_ROUND3 = "df40_openworld_round3"
 ROUND2_TRAIN_METHODS = {"kandinsky22", "sana600m", "recon_movq", "recon_dcae"}
 ROUND2_VALIDATION_METHODS = {"stable_cascade_lite"}
 
@@ -112,12 +114,12 @@ JPEG_QUALITY = 90
 
 def method_roles(protocol: str = PROTOCOL_V1) -> dict[str, set[str]]:
     """Fake methods allowed in each split, for the lineage audit."""
-    if protocol not in {PROTOCOL_V1, PROTOCOL_ROUND2}:
+    if protocol not in {PROTOCOL_V1, PROTOCOL_ROUND2, PROTOCOL_ROUND3}:
         raise ValueError(f"unknown open-world protocol: {protocol}")
     roles: dict[str, set[str]] = {"train": set(TRAIN_METHODS), "validation": set(), "test": set()}
     for method, (split, _, _) in (*EVAL_METHODS.items(), *EXTERNAL.items(), ("e4e", E4E)):
         roles[split].add(method)
-    if protocol == PROTOCOL_ROUND2:
+    if protocol in {PROTOCOL_ROUND2, PROTOCOL_ROUND3}:
         roles["train"].update(ROUND2_TRAIN_METHODS)
         roles["validation"].update(ROUND2_VALIDATION_METHODS)
     return roles
@@ -654,9 +656,15 @@ def materialize(catalog: Path, downloads_root: Path, data_root: Path, output: Pa
     for row, found in zip(canonical, detections, strict=True):
         if not found["reason"]:
             collections[row["preprocess"]][row["fake_method"] or "real"].append(found["eyes"])
+    # A collection may be real only (a test source for false positives), but every
+    # class it lists must keep at least one detected face.
+    listed: dict[str, set[str]] = defaultdict(set)
+    for row in canonical:
+        listed[row["preprocess"]].add(row["fake_method"] or "real")
     targets = {}
-    for name, classes in collections.items():
-        if "real" not in classes or len(classes) < 2:
+    for name, expected in listed.items():
+        classes = collections.get(name, {})
+        if "real" not in expected or set(classes) != expected:
             raise ValueError(f"{name}: real or fake images have no detected faces")
         targets[name] = min(statistics.median(values) for values in classes.values())
     canonical_jobs = []
