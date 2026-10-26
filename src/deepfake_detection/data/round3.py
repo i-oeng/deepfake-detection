@@ -59,6 +59,8 @@ THUMBNAIL_SIDE = 32
 # Thumbnail correlation at or above which two images count as one (calibrated in
 # reports/openworld/round3_protocol.md).
 NEAR_DUPLICATE_CORRELATION = 0.99
+# Share of E9 training images given a black alignment-padding margin.
+PADDING_AUGMENT = 0.5
 
 
 def select_fairface(metadata: Path, output: Path, *, seed: str = SEED) -> dict:
@@ -345,10 +347,15 @@ def audit(manifest_dir: Path, data_root: Path, base_dir: Path, references: list[
 
 
 def freeze_training_config(base_config: Path, manifest_dir: Path, output: Path) -> dict:
-    """Pin the E8 recipe to the round 3 manifest as E9, with real sources balanced."""
+    """Pin the E8 recipe to the round 3 manifest as E9.
+
+    E9 balances FF++ and FairFace reals and adds alignment-padding augmentation; the
+    rest of the E8 recipe, budget, and seeds is unchanged.
+    """
     return freeze_round2(base_config, manifest_dir, output, inherit=PROTOCOL_ROUND2,
                          protocol=PROTOCOL_ROUND3,
-                         settings={"real_balance": "lineage_namespace"})
+                         settings={"real_balance": "lineage_namespace",
+                                   "padding_augment": PADDING_AUGMENT})
 
 
 def _write_json(path: Path, result: dict) -> None:

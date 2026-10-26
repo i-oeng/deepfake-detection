@@ -1,11 +1,18 @@
 # Open-world training round 3
 
 This round is frozen before any round 3 model is trained or fresh v3 is scored.
-It addresses the [real-source bias](real_source_bias.md) of the round 2 models:
-every training real was an FF++ video frame, and E8 separates FF++ reals from real
-photos of every other source at a video AUROC of 0.93-0.98. Round 3 changes only
-the real side of training and keeps the E8 recipe, budget, and seeds, so any
-difference is attributable to the data.
+It removes two training shortcuts that the round 2 models use, and keeps the E8
+recipe, budget, and seeds otherwise:
+
+1. **Real source.** Every training real was an FF++ video frame, and E8 separates
+   FF++ reals from real photos of every other source at a video AUROC of
+   0.93-0.98 ([real-source bias](real_source_bias.md)).
+2. **Alignment padding.** The canonical crop fills whatever lies outside the
+   source photo with black (see below).
+
+Both changes go into one candidate, E9, so a single GPU session can train and
+test it. The result therefore cannot say which change helped; an ablation that
+trains each change alone is the next step if E9 succeeds.
 
 ## Training data
 
@@ -29,8 +36,27 @@ difference is attributable to the data.
   equal sampling mass, and likewise for the self-blended pseudo-fakes made from
   them. Otherwise each single-photo FairFace group would weigh as much as a whole
   FF++ clip, and FairFace would take most of the real mass.
-- **Recipe (E9):** E8 unchanged: CLIP ViT-L/14 with LayerNorm tuning, strong
-  augmentation, 30% self-blends, GenD losses, 6 x 8,000 samples, seeds 20261007-9.
+- **Alignment-padding augmentation:** half of the training images, real and fake
+  alike, get a black margin along one or two edges (4-30% deep, slightly tilted),
+  applied before the other augmentations (`padding_augment: 0.5`).
+- **Recipe (E9):** otherwise E8 unchanged: CLIP ViT-L/14 with LayerNorm tuning,
+  strong augmentation, 30% self-blends, GenD losses, 6 x 8,000 samples, seeds
+  20261007-9.
+
+## Alignment padding
+
+A crop counts as padded when more than 10% of its outer 6-pixel band is black
+(all channels at most 4). Close-up generated faces run out of frame more often
+than training reals: 40% of the Kandinsky crops are padded, against 20% of their
+FairFace reals (round 2: 21% of FF++ reals); Sana is balanced (22% against
+21%). Tightly cropped FFHQ reals show the opposite: 66% of the reals in
+`stable_cascade_lite` and `sfhq_t2i` are padded, against 9% and 19% of their
+fakes. E8 learned the cue. Within FFHQ reals it scores those with a black
+margin at a median of 0.65-0.66 and those without at 0.47-0.49, and on
+`sfhq_t2i` images without a margin it already ranks fakes above reals (median
+0.53 against 0.47). Fresh v3's `openfake` domain is balanced on margins (AUROC of
+the margin share for the label 0.498), so it measures detection without this
+cue.
 
 ## Leakage control
 

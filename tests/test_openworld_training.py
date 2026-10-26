@@ -6,6 +6,7 @@ pytest.importorskip("cv2")
 
 from deepfake_detection.train.openworld import (  # noqa: E402
     SBI_METHOD,
+    AlignmentPadding,
     alignment_uniformity,
     open_world_report,
     sampling_plan,
@@ -117,3 +118,16 @@ def test_open_world_report_lists_real_only_domains_without_scoring_them():
     assert set(report["domain_macro_auroc"]) == {"openfake"}
     assert report["single_class_domains"] == ["lfw"]
     assert report["score"] == 1.0
+
+
+def test_alignment_padding_blacks_out_a_margin_and_keeps_the_center():
+    from PIL import Image
+
+    image = Image.new("RGB", (64, 64), (200, 150, 100))
+    assert AlignmentPadding(0.0)(image) is image
+    for _ in range(20):
+        padded = np.asarray(AlignmentPadding(1.0)(image))
+        assert (padded.max(axis=2) == 0).any()
+        assert tuple(padded[32, 32]) == (200, 150, 100)
+    with pytest.raises(ValueError):
+        AlignmentPadding(1.5)

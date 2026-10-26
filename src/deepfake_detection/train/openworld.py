@@ -23,7 +23,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 import yaml
-from PIL import Image, ImageFilter
+from PIL import Image, ImageDraw, ImageFilter
 from torch import nn
 from torch.utils.data import DataLoader, Dataset, WeightedRandomSampler
 from torchvision import transforms
@@ -155,9 +155,56 @@ class Degrade:
         return image
 
 
-def build_transform(training: bool, strength: str = "base") -> transforms.Compose:
+class AlignmentPadding:
+    """Black out an image margin the way an out-of-frame alignment crop pads it.
+
+    Canonical crops fill whatever lies outside the source photo with black. Close-up
+    generated faces run out of frame more often than training reals (Kandinsky 40%
+    against 20% of their reals), while tightly cropped FFHQ reals do so more than
+    their fakes (66% against 9-19%). Applied to both classes alike, this makes a
+    black margin carry less label information during training.
+    """
+
+    def __init__(self, probability: float) -> None:
+        if not 0.0 <= probability <= 1.0:
+            raise ValueError("padding_augment must be a probability")
+        self.probability = probability
+
+    @staticmethod
+    def _region(edge: str, depth: float, tilt: float, width: int, height: int) -> list:
+        """Polygon beyond a slightly tilted line ``depth`` of the way in from ``edge``."""
+        if edge in {"left", "right"}:
+            near = depth * width - tilt * height / 2
+            far = depth * width + tilt * height / 2
+            if edge == "left":
+                return [(0, 0), (near, 0), (far, height), (0, height)]
+            return [(width, 0), (width - near, 0), (width - far, height), (width, height)]
+        near = depth * height - tilt * width / 2
+        far = depth * height + tilt * width / 2
+        if edge == "top":
+            return [(0, 0), (width, 0), (width, far), (0, near)]
+        return [(0, height), (width, height), (width, height - far), (0, height - near)]
+
+    def __call__(self, image: Image.Image) -> Image.Image:
+        if random.random() >= self.probability:
+            return image
+        width, height = image.size
+        mask = Image.new("L", image.size, 0)
+        draw = ImageDraw.Draw(mask)
+        edges = random.sample(("left", "right", "top", "bottom"), random.choice((1, 1, 2)))
+        for edge in edges:
+            draw.polygon(self._region(edge, random.uniform(0.04, 0.3),
+                                      random.uniform(-0.12, 0.12), width, height), fill=255)
+        return Image.composite(Image.new(image.mode, image.size), image, mask)
+
+
+def build_transform(training: bool, strength: str = "base",
+                    padding: float = 0.0) -> transforms.Compose:
     operations: list = []
     if training:
+        if padding:
+            # First, so later crops, color, and compression act on the margin as on data.
+            operations.append(AlignmentPadding(padding))
         operations += [
             transforms.RandomResizedCrop(
                 224, scale=(0.88, 1.0), interpolation=transforms.InterpolationMode.BICUBIC
@@ -176,9 +223,9 @@ def build_transform(training: bool, strength: str = "base") -> transforms.Compos
 
 class Images(Dataset):
     def __init__(self, rows: list[dict[str, str]], *, training: bool,
-                 strength: str = "base") -> None:
+                 strength: str = "base", padding: float = 0.0) -> None:
         self.rows = rows
-        self.transform = build_transform(training, strength)
+        self.transform = build_transform(training, strength, padding)
 
     def __len__(self) -> int:
         return len(self.rows)
@@ -416,7 +463,8 @@ def train(config_path: Path, *, seed: int | None = None) -> dict:
 
     train_rows, weights, sampling_mass = sampling_plan(splits["train"], config)
     print(json.dumps({"sampling_mass": sampling_mass}), flush=True)
-    dataset = Images(train_rows, training=True, strength=str(config.get("augment", "base")))
+    dataset = Images(train_rows, training=True, strength=str(config.get("augment", "base")),
+                     padding=float(config.get("padding_augment", 0.0)))
     batch_size = int(config["batch_size"])
     steps_per_epoch = int(config["samples_per_epoch"]) // batch_size
     epochs = int(config["epochs"])
