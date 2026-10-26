@@ -312,6 +312,39 @@ faces. Nothing is written to disk unless you build a crop artifact explicitly
 with `deepfake-detect crops`. See the [model card](MODEL_CARD.md) for intended
 use and limitations.
 
+### Image demonstration window
+
+Use the same release bundle in the interactive image inspector:
+
+```bash
+deepfake-demo --bundle artifacts/bundles/clip-20261006
+```
+
+The **Open images** button accepts one or several JPEG, PNG, WebP, BMP, or TIFF
+files. The left side shows the input and face bounding boxes. The terminal panel
+shows the selected box, detector score, model logit, Platt calibration calculation,
+fake probability, fixed threshold, verdict, timing, device, and model version.
+Use **Previous** and **Next** to move through selected images and **Save snapshot**
+to export the annotated image and diagnostics as one PNG. An initial set of images
+can also be passed on the command line:
+
+```bash
+deepfake-demo --bundle artifacts/bundles/clip-20261006 demo/real.jpg demo/generated.png
+```
+
+On a server without a desktop, render one shareable snapshot without opening a
+window:
+
+```bash
+deepfake-demo --bundle artifacts/bundles/clip-20261006 \
+  --snapshot reports/demo/generated-inspection.png demo/generated.png
+```
+
+The desktop window uses Python's Tkinter module. The Python.org macOS installer
+includes it; Homebrew users can install the matching `python-tk` formula if their
+Python build does not. The displayed probability is a calibrated model signal,
+not proof of an image's provenance.
+
 ## Quality gates
 
 The default configuration fails when it finds missing/corrupt images, duplicate

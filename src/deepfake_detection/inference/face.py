@@ -142,7 +142,16 @@ class FaceResult:
 
 def extract_face(rgb: np.ndarray, detector: FaceDetector) -> FaceResult:
     """Apply the pre-registered policy: the largest confident face, if it is large enough."""
-    faces = detector.detect(rgb)
+    return select_face(rgb, detector.detect(rgb))
+
+
+def select_face(rgb: np.ndarray, faces: list[Face]) -> FaceResult:
+    """Apply the face policy to detections that have already been computed.
+
+    Keeping selection separate lets interactive inference draw every detector box
+    without running YuNet a second time. ``extract_face`` remains the ordinary
+    one-call API used by batch inference.
+    """
     if not faces:
         return FaceResult(None, None, 0, "no_face")
     confident = [face for face in faces if face.score >= MIN_SCORE]

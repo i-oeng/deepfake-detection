@@ -41,6 +41,7 @@ deepfake-fuse = "deepfake_detection.train.fusion:main"
 deepfake-summarize-seeds = "deepfake_detection.train.summarize:main"
 deepfake-evaluate = "deepfake_detection.train.extended:main"
 deepfake-detect = "deepfake_detection.inference.cli:main"
+deepfake-demo = "deepfake_detection.inference.demo:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
