@@ -1,6 +1,7 @@
 import csv
 import hashlib
 import json
+from pathlib import Path
 
 import pytest
 
@@ -120,6 +121,57 @@ def test_combine_drops_only_the_replaced_round2_pairings(tmp_path):
     assert result["round2_rows_replaced"] == 2
     assert {row["source_domain"] for row in _read(output)} == {
         "round2_recon_movq", "round3_kandinsky22"}
+
+
+def test_prune_keeps_validation_additions_that_only_match_themselves(tmp_path, monkeypatch):
+    np = pytest.importorskip("numpy")
+
+    def addition(name, split, method=""):
+        return _row(domain="added", method=method, family=EFS, split=split, video=name,
+                    frame="0.png", entities=(f"fairface:{name}",), archive="dir:x",
+                    member=f"{name}.png", preprocess="canonical:added")
+
+    def fingerprinted(path, split, digest, source_id=""):
+        return {"source_id": source_id or path, "relative_path": path, "split": split,
+                "status": "ok", "file_sha256": digest, "pixel_sha256": digest,
+                "dhash64": digest}
+
+    additions = {"leak": addition("leak", "train", "kandinsky22"),
+                 "near": addition("near", "train", "kandinsky22"),
+                 "clean": addition("clean", "train"),
+                 "own": addition("own", "validation", "stable_cascade_lite"),
+                 "fresh": addition("fresh", "validation")}
+    catalog = tmp_path / "additions.csv"
+    _write_catalog(catalog, list(additions.values()))
+    preliminary, fresh = tmp_path / "preliminary", tmp_path / "fresh"
+    manifests = {
+        preliminary: [fingerprinted(row["relative_path"], row["split"], name, row["image_id"])
+                      for name, row in additions.items()]
+        # A base validation image with the same bytes as the "leak" addition.
+        + [fingerprinted("base/val.png", "validation", "leak")],
+        fresh: [fingerprinted("fresh/test.png", "test", "fresh-copy")],
+    }
+    # Thumbnails by file name, or by video folder for additions.
+    basis = np.eye(6, dtype=np.float32)
+    near = basis[3] + 0.02 * basis[4]
+    vectors = {"val.png": basis[0], "leak": basis[1], "clean": basis[2], "own": basis[3],
+               "near": near / np.linalg.norm(near), "fresh": basis[5], "test.png": basis[5]}
+
+    def thumbnails(paths, workers=8):
+        if not paths:
+            return np.zeros((0, 6), dtype=np.float32)
+        return np.stack([vectors.get(Path(path).name, vectors.get(Path(path).parent.name))
+                         for path in paths])
+
+    monkeypatch.setattr(round3, "verify_manifest", lambda directory: (True, []))
+    monkeypatch.setattr(round3, "_read_manifest", lambda directory: manifests[directory])
+    monkeypatch.setattr(round3, "thumbnails", thumbnails)
+    output = tmp_path / "pruned.csv"
+    result = round3.prune_evaluation_overlaps(catalog, preliminary, tmp_path / "data",
+                                              [(fresh, tmp_path / "fresh-data")], output)
+    kept = {row["image_id"] for row in _read(output)}
+    assert kept == {additions["clean"]["image_id"], additions["own"]["image_id"]}
+    assert result["hits"] == {"file_sha256": 1, "thumbnail_correlation": 2}
 
 
 def test_thumbnail_correlation_finds_recompressed_copies_only(tmp_path):

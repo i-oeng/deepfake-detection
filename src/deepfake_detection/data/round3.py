@@ -243,13 +243,13 @@ def _evaluation_rows(manifest_dir: Path, data_root: Path,
                      references: list[Reference]) -> list[dict[str, str]]:
     """Every row a model is scored on, with its image path in ``_path``.
 
-    These are the non-train rows of ``manifest_dir`` and all rows of each
-    reference (test-only) manifest.
+    These are the non-train rows of ``manifest_dir`` (``_own`` set) and all rows of
+    each reference (test-only) manifest.
     """
-    rows = [{**row, "_path": str(data_root / row["relative_path"])}
+    rows = [{**row, "_path": str(data_root / row["relative_path"]), "_own": True}
             for row in _read_manifest(manifest_dir) if row["split"] != "train"]
     for directory, root in references:
-        rows += [{**row, "_path": str(root / row["relative_path"])}
+        rows += [{**row, "_path": str(root / row["relative_path"]), "_own": False}
                  for row in _read_manifest(directory)]
     return rows
 
@@ -269,7 +269,13 @@ def prune_evaluation_overlaps(catalog: Path, manifest_dir: Path, data_root: Path
     canonical preprocessing; its validation and test rows, and every row of the
     reference (test-only) manifests, are evaluation images. A whole video group goes
     when any of its images matches, so a reconstruction leaves with its real.
+
+    A validation addition is itself an evaluation row of the preliminary build, so
+    it is checked against the references alone, as in round 2; the lineage audit
+    already keeps validation and test apart.
     """
+    import numpy as np
+
     for directory in (manifest_dir, *(directory for directory, _ in references)):
         valid, errors = verify_manifest(directory)
         if not valid:
@@ -282,15 +288,23 @@ def prune_evaluation_overlaps(catalog: Path, manifest_dir: Path, data_root: Path
     if any(row["status"] != "ok" for row in fingerprinted):
         raise ValueError("an addition failed decoding")
     evaluation = _evaluation_rows(manifest_dir, data_root, references)
-    reserved = {column: {row[column] for row in evaluation if row[column]}
-                for column in FINGERPRINTS}
-    correlation = nearest_correlation(
-        thumbnails([str(data_root / row["relative_path"]) for row in fingerprinted], workers),
-        thumbnails([row["_path"] for row in evaluation], workers))
+    scopes = {True: evaluation, False: [row for row in evaluation if not row["_own"]]}
+    reserved = {training: {column: {row[column] for row in rows if row[column]}
+                           for column in FINGERPRINTS}
+                for training, rows in scopes.items()}
+    queries = thumbnails([str(data_root / row["relative_path"]) for row in fingerprinted],
+                         workers)
+    candidates = thumbnails([row["_path"] for row in evaluation], workers)
+    own = np.array([row["_own"] for row in evaluation], dtype=bool)
+    training = np.array([row["split"] == "train" for row in additions], dtype=bool)
+    correlation = np.full(len(additions), -1.0, dtype=np.float32)
+    correlation[training] = nearest_correlation(queries[training], candidates)
+    correlation[~training] = nearest_correlation(queries[~training], candidates[~own])
     hits: Counter[str] = Counter()
     remove: set[tuple[str, str]] = set()
     for row, fingerprint, value in zip(additions, fingerprinted, correlation, strict=True):
-        exact = [column for column in FINGERPRINTS if fingerprint[column] in reserved[column]]
+        scope = reserved[row["split"] == "train"]
+        exact = [column for column in FINGERPRINTS if fingerprint[column] in scope[column]]
         if exact or value >= threshold:
             hits[exact[0] if exact else "thumbnail_correlation"] += 1
             remove.add((row["split"], row["video_id"]))
