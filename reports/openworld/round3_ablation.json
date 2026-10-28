@@ -1,0 +1,163 @@
+{
+  "attribution": {
+    "fresh_v3_bias": {
+      "e9_change": -0.4466319565680221,
+      "e9_data_change": -0.43175175644028096,
+      "e9_padding_change": 0.012393070044709464,
+      "interaction": -0.027273270172450625
+    },
+    "fresh_v3_openfake": {
+      "e9_change": 0.07808926118993398,
+      "e9_data_change": 0.0639930363258423,
+      "e9_padding_change": 0.01560493814896402,
+      "interaction": -0.0015087132848723428
+    },
+    "validation_bias": {
+      "e9_change": -0.3015037885491568,
+      "e9_data_change": -0.2555890279649713,
+      "e9_padding_change": 0.005438396759648079,
+      "interaction": -0.05135315734383361
+    },
+    "validation_ff": {
+      "e9_change": -0.009333333333333194,
+      "e9_data_change": 0.002848484848484989,
+      "e9_padding_change": -0.017898989898989748,
+      "interaction": 0.005717171717171565
+    },
+    "validation_mean": {
+      "e9_change": 0.02476630866225349,
+      "e9_data_change": 0.014532722727795044,
+      "e9_padding_change": 0.013305421880751678,
+      "interaction": -0.003071835946293233
+    },
+    "validation_stable_cascade": {
+      "e9_change": 0.18752749999999996,
+      "e9_data_change": 0.09777533333333333,
+      "e9_padding_change": 0.10466700000000007,
+      "interaction": -0.014914833333333433
+    }
+  },
+  "fresh_v3_against_e8": {
+    "e9": {
+      "detection": {
+        "ci95": [
+          0.05592669764392377,
+          0.09836065573770492
+        ],
+        "difference": 0.07808926118993398,
+        "domain": "openfake",
+        "replicates": 2000
+      },
+      "source_bias": {
+        "baseline": 0.9447710134128167,
+        "candidate": 0.49813905684479454,
+        "ci95": [
+          0.40497931658505426,
+          0.4893895890994252
+        ],
+        "drop": 0.4466319565680221,
+        "replicates": 2000,
+        "sources": [
+          "openfake",
+          "lfw"
+        ]
+      }
+    },
+    "e9_data": {
+      "detection": {
+        "ci95": [
+          0.044035801828336996,
+          0.08239685492262727
+        ],
+        "difference": 0.0639930363258423,
+        "domain": "openfake",
+        "replicates": 2000
+      },
+      "source_bias": {
+        "baseline": 0.9447710134128167,
+        "candidate": 0.5130192569725357,
+        "ci95": [
+          0.38982197147115183,
+          0.47427171598892914
+        ],
+        "drop": 0.43175175644028096,
+        "replicates": 2000,
+        "sources": [
+          "openfake",
+          "lfw"
+        ]
+      }
+    },
+    "e9_padding": {
+      "detection": {
+        "ci95": [
+          0.00869714226110796,
+          0.02284427843769321
+        ],
+        "difference": 0.01560493814896402,
+        "domain": "openfake",
+        "replicates": 2000
+      },
+      "source_bias": {
+        "baseline": 0.9447710134128167,
+        "candidate": 0.9571640834575261,
+        "ci95": [
+          -0.022028784330423656,
+          -0.004299701937406808
+        ],
+        "drop": -0.012393070044709464,
+        "replicates": 2000,
+        "sources": [
+          "openfake",
+          "lfw"
+        ]
+      }
+    }
+  },
+  "manifests": {
+    "e8": "8d03d7a1cc56f0a00e8c",
+    "e9": "e4dd0240af9df4c60b0c",
+    "e9_data": "e4dd0240af9df4c60b0c",
+    "e9_padding": "8d03d7a1cc56f0a00e8c"
+  },
+  "metrics": {
+    "e8": {
+      "fresh_v3_bias": 0.9447710134128167,
+      "fresh_v3_openfake": 0.5957219596633396,
+      "validation_bias": 0.9645155346055446,
+      "validation_ff": 0.9827474747474746,
+      "validation_mean": 0.8861610722962867,
+      "validation_stable_cascade": 0.5182816666666666
+    },
+    "e9": {
+      "fresh_v3_bias": 0.49813905684479454,
+      "fresh_v3_openfake": 0.6738112208532736,
+      "validation_bias": 0.6630117460563878,
+      "validation_ff": 0.9734141414141414,
+      "validation_mean": 0.9109273809585402,
+      "validation_stable_cascade": 0.7058091666666666
+    },
+    "e9_data": {
+      "fresh_v3_bias": 0.5130192569725357,
+      "fresh_v3_openfake": 0.6597149959891819,
+      "validation_bias": 0.7089265066405733,
+      "validation_ff": 0.9855959595959596,
+      "validation_mean": 0.9006937950240818,
+      "validation_stable_cascade": 0.616057
+    },
+    "e9_padding": {
+      "fresh_v3_bias": 0.9571640834575261,
+      "fresh_v3_openfake": 0.6113268978123036,
+      "validation_bias": 0.9699539313651927,
+      "validation_ff": 0.9648484848484848,
+      "validation_mean": 0.8994664941770384,
+      "validation_stable_cascade": 0.6229486666666667
+    }
+  },
+  "round4_recipe": "e9",
+  "rule": {
+    "tolerance": 0.01
+  },
+  "seeds": 3,
+  "sufficient_alone": []
+}

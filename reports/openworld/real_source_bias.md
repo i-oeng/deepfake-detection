@@ -68,5 +68,8 @@ Round 3 ([protocol](round3_protocol.md)) changes the real side of training and
 adds this measure to model selection and to the final test. Its model E9 lowered
 the bias from 0.965 to 0.663 on validation and from 0.945 to 0.498 on fresh v3
 ([result](round3_result.md), [tables](real_source_bias_round3.md)).
+The [ablation](round3_ablation_result.md) traces the drop to the FairFace
+data: alone it brings the bias to 0.709 on validation and 0.513 on fresh v3,
+while the padding augmentation alone leaves it at 0.970 and 0.957.
 
 Data: [`real_source_bias_round2.json`](real_source_bias_round2.json).

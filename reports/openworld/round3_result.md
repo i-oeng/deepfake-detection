@@ -96,3 +96,10 @@ Fresh v2 was scored at the end of round 2 and then inspected, so it is no longer
 | `dff` | 0.942 | 0.923 |
 | `sfhq_t2i` | 0.456 | 0.659 |
 | **Mean** | **0.751** | **0.813** |
+
+## Ablation
+
+A later [ablation](round3_ablation_result.md) trained each change alone. The
+FairFace data gives almost all of the real-source bias drop and most of the
+`openfake` gain; the Stable Cascade gain splits about evenly between the data and
+the padding augmentation. Neither change alone matches E9, so round 4 keeps both.

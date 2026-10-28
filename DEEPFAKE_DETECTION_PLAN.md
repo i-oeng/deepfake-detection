@@ -57,6 +57,10 @@ before training and scores an untouched test set once.
   0.52; 0.5 is none) and improved OpenFake detection, at a cost of 0.009 FF++
   validation AUROC. Celeb-DF and CelebA validation reals still carry some
   source information (0.90 and 0.73-0.75).
+- The round 3 [ablation](reports/openworld/round3_ablation_result.md) traces
+  almost all of the bias drop and most of the OpenFake gain to the FairFace
+  data. The data and the padding augmentation each give about half of the
+  Stable Cascade gain. Neither change alone matches E9, so round 4 keeps both.
 - Detection of current text-to-image generators is still weak: OpenFake AUROC
   0.674 for E9 and 0.477 (chance) for the release model; several FLUX models
   stay at 0.46-0.53.
@@ -314,10 +318,9 @@ The inference package should:
 4. Detect current text-to-image outputs. Fresh v3 (OpenFake) now measures them:
    the release model is at chance and the best open-world model reaches 0.674.
 5. Add demographic slice metrics once a dataset with reliable labels is available.
-6. Ablate round 3: train the FairFace data and the padding augmentation each
-   alone, to learn which change removed which shortcut.
-7. Open-world round 4: add training fakes from current generators and build a
-   new untouched test set (fresh v4), since fresh v3 has now been scored.
+6. Open-world round 4: start from E9 with both round 3 changes (the ablation
+   keeps both), add training fakes from current generators, and build a new
+   untouched test set (fresh v4), since fresh v3 has now been used twice.
 
 ## References
 

@@ -300,8 +300,10 @@ scores an untouched test set once:
 [v1](reports/openworld/openworld_v1_result.md),
 [round 2](reports/openworld/round2_result.md), and
 [round 3](reports/openworld/round3_result.md). Round 3 found and removed a
-real-source shortcut ([analysis](reports/openworld/real_source_bias.md)). Each
-protocol lists its data commands; a round's whole GPU run is one queued job:
+real-source shortcut ([analysis](reports/openworld/real_source_bias.md)); its
+[ablation](reports/openworld/round3_ablation_result.md) traces the fix to the
+FairFace data. Each protocol lists its data commands; a round's whole GPU run is
+one queued job:
 
 ```bash
 scripts/gpu-tsp -L round3 bash -lc 'umask 0007; cd ~/dd-open; exec scripts/run-round3-experiment'
