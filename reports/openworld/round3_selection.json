@@ -1,0 +1,85 @@
+{
+  "advance_e9": true,
+  "baseline_e8": {
+    "domain_mean_auroc": {
+      "cdf": 0.9729640494471004,
+      "ff": 0.9827474747474746,
+      "stable_cascade_lite": 0.5182816666666666,
+      "stargan": 0.9853878878878879,
+      "styleclip": 0.9719468550285907,
+      "whichfaceisreal": 0.8856385000000001
+    },
+    "manifest_id": "8d03d7a1cc56f0a00e8c",
+    "original_v1_domain_mean": 0.9597369534222107,
+    "reports": [
+      "artifacts/openworld/clip_vit_l14-20261007-8d03d7a1cc56f0a00e8c-d3bb2d65-03152b3f/report.json",
+      "artifacts/openworld/clip_vit_l14-20261008-8d03d7a1cc56f0a00e8c-d3bb2d65-9bc75790/report.json",
+      "artifacts/openworld/clip_vit_l14-20261009-8d03d7a1cc56f0a00e8c-d3bb2d65-e44c675e/report.json"
+    ],
+    "score_max": 0.8869188363927156,
+    "score_mean": 0.8861610722962867,
+    "score_min": 0.8847915779619745,
+    "score_stdev": 0.0011882623955782267,
+    "seeds": 3,
+    "source_bias": {
+      "by_source": {
+        "cdf": 0.9277000777000777,
+        "stable_cascade_lite": 0.971630303030303,
+        "stargan": 0.9766242424242423,
+        "styleclip": 0.9736048680549185,
+        "whichfaceisreal": 0.9730181818181819
+      },
+      "mean_auroc": 0.9645155346055446,
+      "seed_mean_auroc": [
+        0.9641387344844862,
+        0.96506428043534,
+        0.9643435888968078
+      ]
+    }
+  },
+  "bias_drop": 0.3015037885491568,
+  "candidate_e9": {
+    "domain_mean_auroc": {
+      "cdf": 0.9566037109469313,
+      "ff": 0.9734141414141414,
+      "stable_cascade_lite": 0.7058091666666666,
+      "stargan": 0.9819596262929596,
+      "styleclip": 0.9757193070972082,
+      "whichfaceisreal": 0.8720583333333334
+    },
+    "manifest_id": "e4dd0240af9df4c60b0c",
+    "original_v1_domain_mean": 0.9519510238169147,
+    "reports": [
+      "/home/xixi/dd-open/artifacts/openworld/clip_vit_l14-20261007-e4dd0240af9df4c60b0c-884b6a15-a86b1027/report.json",
+      "/home/xixi/dd-open/artifacts/openworld/clip_vit_l14-20261008-e4dd0240af9df4c60b0c-884b6a15-050bb542/report.json",
+      "/home/xixi/dd-open/artifacts/openworld/clip_vit_l14-20261009-e4dd0240af9df4c60b0c-884b6a15-5ae68a8e/report.json"
+    ],
+    "score_max": 0.9130733397341517,
+    "score_mean": 0.9109273809585402,
+    "score_min": 0.9097612021632758,
+    "score_stdev": 0.0018607902701591422,
+    "seeds": 3,
+    "source_bias": {
+      "by_source": {
+        "cdf": 0.8947163947163946,
+        "stable_cascade_lite": 0.46918181818181814,
+        "stargan": 0.7507333333333334,
+        "styleclip": 0.7249059719291808,
+        "whichfaceisreal": 0.47552121212121207
+      },
+      "mean_auroc": 0.6630117460563878,
+      "seed_mean_auroc": [
+        0.6648633869863738,
+        0.6580063065491522,
+        0.6661655446336374
+      ]
+    }
+  },
+  "ff_change": -0.009333333333333194,
+  "rule": {
+    "maximum_ff_auroc_drop": 0.01,
+    "maximum_score_drop": 0.01,
+    "minimum_bias_drop": 0.03
+  },
+  "score_change": 0.02476630866225349
+}
