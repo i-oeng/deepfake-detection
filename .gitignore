@@ -39,3 +39,6 @@ reports/fusion/**/gated-*.pt
 !data/manifests/.gitkeep
 !data/subsets/.gitkeep
 !reports/data_audit/.gitkeep
+
+# Scratch outputs: smoke-test images stay local
+.codex-tmp/*.png
