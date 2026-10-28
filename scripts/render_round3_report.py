@@ -92,7 +92,7 @@ def comparison_section(comparison: dict) -> list[str]:
         lines.append(
             f"| {NAMES[key]} | {model['domains']['openfake']['auroc']:.3f} "
             f"| {model['domains']['openfake_reddit']['auroc']:.3f} "
-            f"| {model['bias_primary']:.3f} "
+            f"| {model['bias_primary']:.3f} | "
             + " | ".join(f"{tested[name]['fpr_at_threshold']:.0%}"
                          for name in ("openfake", "openfake_reddit", "lfw")) + " |")
     secondary = comparison["secondary_detection"].get("openfake_reddit")

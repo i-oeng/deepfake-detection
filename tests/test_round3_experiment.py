@@ -89,3 +89,7 @@ def test_comparison_gates_bias_and_detection_and_renders(tmp_path):
     text = render_round3_report.render(selection, audit, result, None)
     assert "Round 3 succeeds: **yes**" in text
     assert "| E9 |" in text
+    # Every table row has as many cells as its header.
+    for table in text.split("\n\n"):
+        rows = [line for line in table.splitlines() if line.startswith("|")]
+        assert all(row.count("|") == rows[0].count("|") for row in rows), table
