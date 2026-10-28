@@ -1,7 +1,9 @@
 import json
 import math
 
-from scripts import compare_round3, render_round3_report, select_round3
+import pytest
+
+from scripts import ablate_round3, compare_round3, render_round3_report, select_round3
 
 VALIDATION = ("ff", "cdf", "stargan", "styleclip", "whichfaceisreal", "stable_cascade_lite")
 
@@ -93,3 +95,35 @@ def test_comparison_gates_bias_and_detection_and_renders(tmp_path):
     for table in text.split("\n\n"):
         rows = [line for line in table.splitlines() if line.startswith("|")]
         assert all(row.count("|") == rows[0].count("|") for row in rows), table
+
+
+def test_ablation_attributes_each_change_and_picks_the_round4_recipe(tmp_path):
+    def arm(name, other_real, test_real, test_fake, manifest):
+        directory = _run(tmp_path, name, other_real)
+        report = json.loads((directory / "report.json").read_text())
+        (directory / "report.json").write_text(json.dumps({**report, "manifest_id": manifest}))
+        return directory, _write(tmp_path / f"{name}-test.jsonl",
+                                 _test_records(test_real, test_fake))
+
+    # Here the data change does all the work and padding does nothing.
+    arms = {"e8": arm("e8", 0.6, 0.6, 0.62, "round2"),
+            "e9_data": arm("e9_data", 0.21, 0.21, 0.7, "round3"),
+            "e9_padding": arm("e9_padding", 0.6, 0.6, 0.62, "round2"),
+            "e9": arm("e9", 0.21, 0.21, 0.7, "round3")}
+    runs = {name: [run] for name, (run, _) in arms.items()}
+    tests = {name: [test] for name, (_, test) in arms.items()}
+    result = ablate_round3.ablate(runs, tests)
+    bias = result["attribution"]["validation_bias"]
+    assert bias["e9_change"] < -0.3
+    assert bias["e9_data_change"] == pytest.approx(bias["e9_change"])
+    assert bias["e9_padding_change"] == pytest.approx(0) and bias["interaction"] == pytest.approx(0)
+    assert result["sufficient_alone"] == ["e9_data"]
+    assert result["round4_recipe"] == "e9_data"
+    text = ablate_round3.render(result)
+    assert "Round 4 starts from **E9-data**" in text
+    for table in text.split("\n\n"):
+        rows = [line for line in table.splitlines() if line.startswith("|")]
+        assert all(row.count("|") == rows[0].count("|") for row in rows), table
+    # An arm trained on the wrong manifest is refused.
+    with pytest.raises(ValueError):
+        ablate_round3.ablate({**runs, "e9_padding": runs["e9"]}, tests)

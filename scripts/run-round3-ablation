@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# Round 3 ablation on xixi: train the FairFace data and the padding augmentation
+# each alone, seed by seed so an interrupted run leaves paired arms, score them on
+# fresh v3 (its second use), and attribute E9's changes. Resumable. Needs the whole
+# GPU: stop the resell bot's Ollama first.
+set -euo pipefail
+umask 0007
+project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$project_root"
+export PYTHONPATH="$project_root/src"
+python="${PYTHON:-$HOME/deepfake-detection/.venv/bin/python}"
+fresh_v3=configs/evaluation/openworld_fresh_v3.yaml
+art=artifacts/openworld
+runtime=runtime/round3_ablation
+seeds=(20261007 20261008 20261009)
+declare -A configs=(
+  [e9_data]=configs/training/openworld/e9_data_l14_round3.yaml
+  [e9_padding]=configs/training/openworld/e9_padding_l14_round2.yaml
+)
+mkdir -p "$runtime" "$art/fresh-v3"
+
+used="$(nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits | head -n 1)"
+if (( used > 1500 )); then
+  echo "GPU already holds ${used} MiB; stop Ollama (sudo systemctl stop ollama) first" >&2
+  exit 3
+fi
+
+e8_runs=(
+  "$art/clip_vit_l14-20261007-8d03d7a1cc56f0a00e8c-d3bb2d65-03152b3f"
+  "$art/clip_vit_l14-20261008-8d03d7a1cc56f0a00e8c-d3bb2d65-9bc75790"
+  "$art/clip_vit_l14-20261009-8d03d7a1cc56f0a00e8c-d3bb2d65-e44c675e"
+)
+e9_runs=(
+  "$art/clip_vit_l14-20261007-e4dd0240af9df4c60b0c-884b6a15-a86b1027"
+  "$art/clip_vit_l14-20261008-e4dd0240af9df4c60b0c-884b6a15-050bb542"
+  "$art/clip_vit_l14-20261009-e4dd0240af9df4c60b0c-884b6a15-5ae68a8e"
+)
+args=()
+for index in 0 1 2; do
+  seed="${seeds[$index]}"
+  args+=(--run "e8=${e8_runs[$index]}" --test "e8=$art/fresh-v3/e8-$seed/test.jsonl"
+         --run "e9=${e9_runs[$index]}" --test "e9=$art/fresh-v3/e9-$seed/test.jsonl")
+  for arm in e9_data e9_padding; do
+    result="$runtime/$arm-$seed.json"
+    if [[ ! -f "$result" ]]; then
+      log="$runtime/$arm-$seed.log"
+      # Run as a module: Python 3.14 DataLoader workers re-import __main__.
+      "$python" -m deepfake_detection.train.openworld train --config "${configs[$arm]}" \
+        --seed "$seed" | tee "$log"
+      # Epoch records are one-line JSON; the final result is the indented object.
+      LOG="$log" RESULT="$result" "$python" -c '
+import json, os
+from pathlib import Path
+text = "\n" + Path(os.environ["LOG"]).read_text()
+result = json.loads(text[text.rindex("\n{\n") + 1:])
+Path(os.environ["RESULT"]).write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")'
+    fi
+    run_dir="$(RESULT="$result" "$python" -c \
+      'import json,os; print(json.load(open(os.environ["RESULT"]))["run_dir"])')"
+    scored="$art/fresh-v3/$arm-$seed"
+    if [[ ! -f "$scored/test_report.json" ]]; then
+      "$python" -m deepfake_detection.train.openworld score-manifest \
+        --run-dir "$run_dir" --evaluation-config "$fresh_v3" --output "$scored"
+    fi
+    args+=(--run "$arm=$run_dir" --test "$arm=$scored/test.jsonl")
+  done
+done
+
+"$python" scripts/ablate_round3.py "${args[@]}" \
+  --output reports/openworld/round3_ablation.json \
+  --markdown reports/openworld/round3_ablation_result.md
