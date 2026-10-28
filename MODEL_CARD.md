@@ -104,8 +104,14 @@ clip, candidate identity, pixel-hash, or perceptual-hash overlap.
   untested. No demographic slice metrics exist because the datasets publish no
   reliable demographic labels.
 - **New generators.** Results cover DF40's 14 methods plus Celeb-DF v2's
-  synthesis. Current text-to-image and video generators are unseen, and
-  performance on them is unknown.
+  synthesis. On OpenFake's photos from current text-to-image generators the
+  model scores an AUROC of 0.48, which is chance
+  ([open-world round 3](reports/openworld/round3_result.md)); do not use it on
+  fully generated images. Video generators are untested.
+- **Real-photo source.** Scores depend on where a real photo comes from: the
+  model separates FF++ real frames from real photos of Celeb-DF, CelebA, FFHQ,
+  LFW, and OpenFake at an AUROC of 0.98-1.00, rating the other sources as more
+  fake ([real-source bias](reports/openworld/real_source_bias_round3.md)).
 - **Image size.** DF40's full-face synthesis crops are 512 px while most others
   are 256 px; resizing to 224 px removes the size but may leave resampling traces
   a model could exploit.

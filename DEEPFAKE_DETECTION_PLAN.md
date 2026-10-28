@@ -14,7 +14,7 @@ All three tracks have frozen results, and a calibrated inference package
 exists. Section 2 records where each milestone stands; sections 4-10 remain the
 reference design.
 
-## 2. Current state (2026-10-07)
+## 2. Current state (2026-10-28)
 
 | Milestone | Status | Evidence |
 |---|---|---|
@@ -36,6 +36,32 @@ Main findings:
 - Lip-sync and talking-head methods on Celeb-DF stay near chance, and strong
   H.264 compression (CRF 38) costs 0.19-0.36 AUROC.
 - The FF++-calibrated threshold does not transfer to raw Celeb-DF video.
+
+### Open-world research track
+
+The `research/open-world-generalization` branch retrains for generators and real
+photo sources outside the frozen protocol. Each round freezes its protocol
+before training and scores an untouched test set once.
+
+| Round | Change | Untouched test | Result |
+|---|---|---|---|
+| v1 (E7) | 19 DF40 training generators; CLIP ViT-L/14 with LayerNorm tuning, strong augmentation, self-blends, GenD losses | Held-out DF40 generators and domains | Test 0.824 (release model) to 0.889; [result](reports/openworld/openworld_v1_result.md) |
+| 2 (E8) | Kandinsky 2.2 and Sana text-to-image fakes; MoVQ and DC-AE reconstructions | Fresh v2: Celeb-DF video, DFF, SFHQ-T2I | 0.617 (release), 0.693 (E7), 0.751 (E8); [result](reports/openworld/round2_result.md) |
+| 3 (E9) | FairFace reals and reconstructions, real-source balancing, alignment-padding augmentation | Fresh v3: OpenFake, LFW | OpenFake 0.596 (E8) to 0.674; real-source bias 0.945 to 0.498; [result](reports/openworld/round3_result.md) |
+
+- Up to round 2 every training real was an FF++ frame. E7 and E8 separate FF++
+  reals from real photos of every other source at an AUROC of 0.90-0.98, and
+  E8 also reads black alignment padding as evidence; its fresh v2 gain on
+  SFHQ-T2I was not detection ([real-source bias](reports/openworld/real_source_bias.md)).
+- Round 3 removed the real-source shortcut on the test reals (LFW 0.48, OpenFake
+  0.52; 0.5 is none) and improved OpenFake detection, at a cost of 0.009 FF++
+  validation AUROC. Celeb-DF and CelebA validation reals still carry some
+  source information (0.90 and 0.73-0.75).
+- Detection of current text-to-image generators is still weak: OpenFake AUROC
+  0.674 for E9 and 0.477 (chance) for the release model; several FLUX models
+  stay at 0.46-0.53.
+- The release bundle is still the frozen-protocol CLIP ViT-B/16; no open-world
+  model is released.
 
 ## 3. Target pipeline
 
@@ -285,10 +311,13 @@ The inference package should:
 2. Add a temporal model for lip-sync and talking-head manipulation (Phase 7's
    second release); frame models are near chance on these methods off-domain.
 3. Train with compression augmentation that includes H.264, and re-run P4.
-4. Collect a labeled whole-image set (real photos and current text-to-image
-   outputs) before claiming anything about fully generated images; DF40 covers
-   face crops only.
+4. Detect current text-to-image outputs. Fresh v3 (OpenFake) now measures them:
+   the release model is at chance and the best open-world model reaches 0.674.
 5. Add demographic slice metrics once a dataset with reliable labels is available.
+6. Ablate round 3: train the FairFace data and the padding augmentation each
+   alone, to learn which change removed which shortcut.
+7. Open-world round 4: add training fakes from current generators and build a
+   new untouched test set (fresh v4), since fresh v3 has now been scored.
 
 ## References
 

@@ -292,6 +292,21 @@ deepfake-evaluate report --config configs/evaluation/df40_extended.yaml \
 python -m deepfake_detection.train.profile --output reports/experiments/df40_model_profile.json
 ```
 
+## Open-world research
+
+Open-world rounds retrain for generators and real-photo sources outside the
+frozen protocol. Each round freezes a protocol, selects on validation, and
+scores an untouched test set once:
+[v1](reports/openworld/openworld_v1_result.md),
+[round 2](reports/openworld/round2_result.md), and
+[round 3](reports/openworld/round3_result.md). Round 3 found and removed a
+real-source shortcut ([analysis](reports/openworld/real_source_bias.md)). Each
+protocol lists its data commands; a round's whole GPU run is one queued job:
+
+```bash
+scripts/gpu-tsp -L round3 bash -lc 'umask 0007; cd ~/dd-open; exec scripts/run-round3-experiment'
+```
+
 ## Inference
 
 Install the inference extra (`pip install -e ".[train,inference]"`). A release

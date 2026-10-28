@@ -143,3 +143,13 @@ python -m deepfake_detection.data.round3 select-fairface \
 scripts/rebuild-fresh-v3
 scripts/gpu-tsp -L round3 bash -lc 'umask 0007; cd ~/dd-open; exec scripts/run-round3-experiment'
 ```
+
+## Amendment after freezing (2026-10-27)
+
+The first run stopped at the manifest audit, before any model was trained or
+scored. Pruning compared round 2's `stable_cascade_lite` validation additions
+with the preliminary build's own validation rows, which include those same
+images, and removed all 2,000. Commit `884b6a1` checks validation additions
+against the test-only references alone, as round 2 did; training additions are
+checked as frozen. The rebuilt manifest `e4dd0240af9df4c60b0c` lost no rows and
+passed the audit. The result is in [round3_result.md](round3_result.md).
