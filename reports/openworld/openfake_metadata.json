@@ -1,0 +1,1671 @@
+{
+  "download_plan": {
+    "excluded_generators": [
+      "anima-preview",
+      "anima-preview2",
+      "animagine-xl-3.0",
+      "animagine-xl-3.1",
+      "animagine-xl-4.0",
+      "hunyuan-video",
+      "illustrious",
+      "kling-video-v2.5-turbo",
+      "look-back-wan2.1-t2v-14b-v1.0",
+      "ltxv-2.3",
+      "noobai",
+      "novaanimexl_ilv140",
+      "pony",
+      "sora-2",
+      "studio-ghibli-wan2.1-t2v-14b-v1.0",
+      "tiny-random-sana",
+      "veo-3",
+      "wan-video-2.1",
+      "wan-video-2.2",
+      "wan-video-2.5"
+    ],
+    "person_rows_available": {
+      "fake/dalle": {
+        "members": {
+          "dalle-3": 29188
+        },
+        "rows": 29188
+      },
+      "fake/flux1": {
+        "members": {
+          "chroma": 3933,
+          "flux-1.1-pro": 23252,
+          "flux-amateursnapshotphotos": 2878,
+          "flux-mvc5000": 12444,
+          "flux-realism": 1396,
+          "flux.1-dev": 88717,
+          "flux.1-schnell": 33475,
+          "mystic": 12009,
+          "openflux.1": 1047,
+          "twbabeflux-v1": 459
+        },
+        "rows": 179610
+      },
+      "fake/flux2": {
+        "members": {
+          "flux.2-dev": 12292,
+          "flux.2-klein-4b": 7134,
+          "flux.2-klein-base-4b": 7048
+        },
+        "rows": 26474
+      },
+      "fake/gpt_image": {
+        "members": {
+          "gpt-image-1": 30559
+        },
+        "rows": 30559
+      },
+      "fake/grok": {
+        "members": {
+          "grok-2-image-1212": 7404,
+          "grok-imagine": 865
+        },
+        "rows": 8269
+      },
+      "fake/hidream": {
+        "members": {
+          "hidream-i1-full": 22192
+        },
+        "rows": 22192
+      },
+      "fake/ideogram": {
+        "members": {
+          "ideogram-3.0": 22263
+        },
+        "rows": 22263
+      },
+      "fake/imagen": {
+        "members": {
+          "imagen-3.0-002": 2698,
+          "imagen-4.0": 9827
+        },
+        "rows": 12525
+      },
+      "fake/kolors": {
+        "members": {
+          "kolors-v1.0": 1187
+        },
+        "rows": 1187
+      },
+      "fake/midjourney": {
+        "members": {
+          "midjourney-6": 22049
+        },
+        "rows": 22049
+      },
+      "fake/nano_banana": {
+        "members": {
+          "nano-banana-2": 1251
+        },
+        "rows": 1251
+      },
+      "fake/other:amateur-photography-v2.0": {
+        "members": {
+          "amateur-photography-v2.0": 266
+        },
+        "rows": 266
+      },
+      "fake/other:amateur-photography-v5-final": {
+        "members": {
+          "amateur-photography-v5-final": 190
+        },
+        "rows": 190
+      },
+      "fake/other:amateur-photography-v6": {
+        "members": {
+          "amateur-photography-v6": 919
+        },
+        "rows": 919
+      },
+      "fake/playground": {
+        "members": {
+          "playground-v2.5-1024px-aesthetic": 6851
+        },
+        "rows": 6851
+      },
+      "fake/qwen": {
+        "members": {
+          "qwen-image": 6907
+        },
+        "rows": 6907
+      },
+      "fake/sd1": {
+        "members": {
+          "realistic_vision_v5.1_novae": 6877,
+          "sd-1.5": 15946,
+          "sd-1.5-dreamshaper": 31062,
+          "sd-1.5-epicdream": 17844,
+          "stable-diffusion-v1-4": 6610,
+          "stable-diffusion-v1-5": 13781
+        },
+        "rows": 92120
+      },
+      "fake/sd2": {
+        "members": {
+          "sd-2.1": 106648,
+          "sd-turbo": 6471
+        },
+        "rows": 113119
+      },
+      "fake/sd3": {
+        "members": {
+          "sd-3.5": 125530
+        },
+        "rows": 125530
+      },
+      "fake/sdxl": {
+        "members": {
+          "cyberrealistic-pony-v14.0": 1133,
+          "cyberrealistic-pony-v14.1": 3087,
+          "cyberrealistic-pony-v15.0": 1498,
+          "cyberrealistic-pony-v16.0": 1687,
+          "cyberrealistic-pony-v17.0": 860,
+          "cyberrealistic-xl-v10.0": 112,
+          "cyberrealistic-xl-v9.0": 1427,
+          "one-obsession-17-red-sdxl": 2898,
+          "realvisxl_v4.0": 158,
+          "sd-xl-v1.0-vae-fix": 1715,
+          "sdxl": 31165,
+          "sdxl-1.0": 865,
+          "sdxl-epic-realism": 46942,
+          "sdxl-juggernaut": 19038,
+          "sdxl-realvis-v5": 26324,
+          "sdxl-touchofrealism": 25538,
+          "sdxl-turbo": 6718,
+          "stable-diffusion-xl-base-1.0": 3455
+        },
+        "rows": 174620
+      },
+      "fake/seedream": {
+        "members": {
+          "seedream-v4.0": 1288,
+          "seedream-v4.5": 1483
+        },
+        "rows": 2771
+      },
+      "real/laion": {
+        "members": {
+          "laion": 471934
+        },
+        "rows": 471934
+      },
+      "real/pexels": {
+        "members": {
+          "pexels": 311693
+        },
+        "rows": 311693
+      }
+    },
+    "plan_A": {
+      "fake_rows_per_family": {
+        ">= 20000 available": 3000
+      },
+      "real_rows_per_source": 15000,
+      "row_groups": 2374,
+      "rows_collected": {
+        "fake/dalle": 3142,
+        "fake/flux1": 12293,
+        "fake/flux2": 3097,
+        "fake/gpt_image": 3209,
+        "fake/grok": 501,
+        "fake/hidream": 3007,
+        "fake/ideogram": 3004,
+        "fake/imagen": 763,
+        "fake/kolors": 79,
+        "fake/midjourney": 3000,
+        "fake/nano_banana": 84,
+        "fake/other:amateur-photography-v2.0": 14,
+        "fake/other:amateur-photography-v5-final": 10,
+        "fake/other:amateur-photography-v6": 62,
+        "fake/playground": 431,
+        "fake/qwen": 445,
+        "fake/sd1": 6966,
+        "fake/sd2": 8225,
+        "fake/sd3": 8925,
+        "fake/sdxl": 11845,
+        "fake/seedream": 171,
+        "real/laion": 35225,
+        "real/pexels": 24955
+      },
+      "shards_touched": 547,
+      "streamed_image_gb": 239.4
+    },
+    "plan_B": {
+      "fake_rows_per_family": {
+        ">= 20000 available": 3000,
+        ">= 6000 available": 2000
+      },
+      "real_rows_per_source": 15000,
+      "row_groups": 3681,
+      "rows_collected": {
+        "fake/dalle": 4076,
+        "fake/flux1": 19172,
+        "fake/flux2": 3957,
+        "fake/gpt_image": 4191,
+        "fake/grok": 2000,
+        "fake/hidream": 3585,
+        "fake/ideogram": 3557,
+        "fake/imagen": 2153,
+        "fake/kolors": 107,
+        "fake/midjourney": 3578,
+        "fake/nano_banana": 155,
+        "fake/other:amateur-photography-v2.0": 24,
+        "fake/other:amateur-photography-v5-final": 16,
+        "fake/other:amateur-photography-v6": 97,
+        "fake/playground": 2000,
+        "fake/qwen": 2000,
+        "fake/sd1": 10363,
+        "fake/sd2": 12531,
+        "fake/sd3": 13910,
+        "fake/sdxl": 18639,
+        "fake/seedream": 279,
+        "real/laion": 53225,
+        "real/pexels": 36487
+      },
+      "shards_touched": 573,
+      "streamed_image_gb": 365.5
+    },
+    "train_image_gb": 3279.8
+  },
+  "fake_generators": {
+    "test_only": [
+      "aurora-20-1-25",
+      "ernie-image",
+      "ernie-image-turbo",
+      "flux.2-klein-9b",
+      "frames-23-1-25",
+      "gpt-image-1.5",
+      "gpt-image-2",
+      "halfmoon-4-4-25",
+      "ideogram-2.0",
+      "illustrious",
+      "lumina-17-2-25",
+      "midjourney-7",
+      "nano-banana-pro",
+      "recraft-v2",
+      "recraft-v3",
+      "seedream-v5.0",
+      "sora-2",
+      "veo-3",
+      "wan-video-2.5",
+      "z-image-turbo"
+    ],
+    "train_and_test": [],
+    "train_only": [
+      "amateur-photography-v2.0",
+      "amateur-photography-v5-final",
+      "amateur-photography-v6",
+      "anima-preview",
+      "anima-preview2",
+      "animagine-xl-3.0",
+      "animagine-xl-3.1",
+      "animagine-xl-4.0",
+      "chroma",
+      "cyberrealistic-pony-v14.0",
+      "cyberrealistic-pony-v14.1",
+      "cyberrealistic-pony-v15.0",
+      "cyberrealistic-pony-v16.0",
+      "cyberrealistic-pony-v17.0",
+      "cyberrealistic-xl-v10.0",
+      "cyberrealistic-xl-v9.0",
+      "dalle-3",
+      "flux-1.1-pro",
+      "flux-amateursnapshotphotos",
+      "flux-mvc5000",
+      "flux-realism",
+      "flux.1-dev",
+      "flux.1-schnell",
+      "flux.2-dev",
+      "flux.2-klein-4b",
+      "flux.2-klein-base-4b",
+      "gpt-image-1",
+      "grok-2-image-1212",
+      "grok-imagine",
+      "hidream-i1-full",
+      "hunyuan-video",
+      "ideogram-3.0",
+      "imagen-3.0-002",
+      "imagen-4.0",
+      "kling-video-v2.5-turbo",
+      "kolors-v1.0",
+      "look-back-wan2.1-t2v-14b-v1.0",
+      "ltxv-2.3",
+      "midjourney-6",
+      "mystic",
+      "nano-banana-2",
+      "noobai",
+      "novaanimexl_ilv140",
+      "one-obsession-17-red-sdxl",
+      "openflux.1",
+      "playground-v2.5-1024px-aesthetic",
+      "pony",
+      "qwen-image",
+      "realistic_vision_v5.1_novae",
+      "realvisxl_v4.0",
+      "sd-1.5",
+      "sd-1.5-dreamshaper",
+      "sd-1.5-epicdream",
+      "sd-2.1",
+      "sd-3.5",
+      "sd-turbo",
+      "sd-xl-v1.0-vae-fix",
+      "sdxl",
+      "sdxl-1.0",
+      "sdxl-epic-realism",
+      "sdxl-juggernaut",
+      "sdxl-realvis-v5",
+      "sdxl-touchofrealism",
+      "sdxl-turbo",
+      "seedream-v4.0",
+      "seedream-v4.5",
+      "stable-diffusion-v1-4",
+      "stable-diffusion-v1-5",
+      "stable-diffusion-xl-base-1.0",
+      "studio-ghibli-wan2.1-t2v-14b-v1.0",
+      "tiny-random-sana",
+      "twbabeflux-v1",
+      "wan-video-2.1",
+      "wan-video-2.2"
+    ],
+    "validation_only": []
+  },
+  "heuristics": {
+    "person_prompt": "prompt matches PERSON in scripts/openfake_metadata.py",
+    "public_figure": "prompt contains one of 5728 LFW full names (bitmind/lfw revision 274dfbca)"
+  },
+  "openfaketiny_overlap": {
+    "available": false,
+    "reason": "OpenFakeTiny has no image_sha256"
+  },
+  "public_figures": {
+    "core/test": {
+      "distinct_names": 97,
+      "fake_rows": 110,
+      "real_rows": 52
+    },
+    "core/train": {
+      "distinct_names": 2098,
+      "fake_rows": 31045,
+      "real_rows": 29015
+    },
+    "core/validation": {
+      "distinct_names": 561,
+      "fake_rows": 438,
+      "real_rows": 912
+    },
+    "reddit/test": {
+      "distinct_names": 25,
+      "fake_rows": 32,
+      "real_rows": 5
+    },
+    "top_names": [
+      [
+        "Donald Trump",
+        1477
+      ],
+      [
+        "Prince William",
+        1146
+      ],
+      [
+        "Prince Harry",
+        923
+      ],
+      [
+        "Queen Elizabeth II",
+        784
+      ],
+      [
+        "Michael Jackson",
+        729
+      ],
+      [
+        "Hillary Clinton",
+        624
+      ],
+      [
+        "Tom Cruise",
+        614
+      ],
+      [
+        "Brad Pitt",
+        608
+      ],
+      [
+        "Elvis Presley",
+        598
+      ],
+      [
+        "Jennifer Aniston",
+        577
+      ],
+      [
+        "Marilyn Monroe",
+        567
+      ],
+      [
+        "Jennifer Lopez",
+        559
+      ],
+      [
+        "Angelina Jolie",
+        540
+      ],
+      [
+        "Johnny Depp",
+        521
+      ],
+      [
+        "Leonardo DiCaprio",
+        491
+      ],
+      [
+        "LeBron James",
+        481
+      ],
+      [
+        "Mitt Romney",
+        428
+      ],
+      [
+        "David Bowie",
+        407
+      ],
+      [
+        "Tiger Woods",
+        407
+      ],
+      [
+        "Will Smith",
+        377
+      ],
+      [
+        "Ben Affleck",
+        370
+      ],
+      [
+        "Bill Clinton",
+        364
+      ],
+      [
+        "Vladimir Putin",
+        364
+      ],
+      [
+        "Reese Witherspoon",
+        361
+      ],
+      [
+        "George W Bush",
+        357
+      ]
+    ]
+  },
+  "source": {
+    "repo": "ComplexDataLab/OpenFake",
+    "revision": "3247b942f18d39d1fd476b1077852af033d35d8c",
+    "shards": 641
+  },
+  "splits": {
+    "core/test": {
+      "labels": {
+        "fake": 45698,
+        "real": 45699
+      },
+      "models": {
+        "aurora-20-1-25": {
+          "label": "fake",
+          "person": 67,
+          "public_figure": 1,
+          "rows": 282,
+          "type": "base"
+        },
+        "docci": {
+          "label": "real",
+          "person": 2918,
+          "public_figure": 5,
+          "rows": 14847,
+          "type": "real"
+        },
+        "ernie-image": {
+          "label": "fake",
+          "person": 189,
+          "public_figure": 0,
+          "rows": 315,
+          "type": "image"
+        },
+        "ernie-image-turbo": {
+          "label": "fake",
+          "person": 514,
+          "public_figure": 1,
+          "rows": 687,
+          "type": "image"
+        },
+        "flux.2-klein-9b": {
+          "label": "fake",
+          "person": 7641,
+          "public_figure": 51,
+          "rows": 8249,
+          "type": "Base"
+        },
+        "frames-23-1-25": {
+          "label": "fake",
+          "person": 52,
+          "public_figure": 0,
+          "rows": 250,
+          "type": "base"
+        },
+        "gpt-image-1.5": {
+          "label": "fake",
+          "person": 3467,
+          "public_figure": 7,
+          "rows": 5573,
+          "type": "image"
+        },
+        "gpt-image-2": {
+          "label": "fake",
+          "person": 205,
+          "public_figure": 0,
+          "rows": 474,
+          "type": "image"
+        },
+        "halfmoon-4-4-25": {
+          "label": "fake",
+          "person": 51,
+          "public_figure": 1,
+          "rows": 190,
+          "type": "base"
+        },
+        "ideogram-2.0": {
+          "label": "fake",
+          "person": 67,
+          "public_figure": 1,
+          "rows": 282,
+          "type": "base"
+        },
+        "illustrious": {
+          "label": "fake",
+          "person": 4622,
+          "public_figure": 0,
+          "rows": 6694,
+          "type": "image"
+        },
+        "imagenet": {
+          "label": "real",
+          "person": 8035,
+          "public_figure": 47,
+          "rows": 30852,
+          "type": "real"
+        },
+        "lumina-17-2-25": {
+          "label": "fake",
+          "person": 106,
+          "public_figure": 1,
+          "rows": 543,
+          "type": "base"
+        },
+        "midjourney-7": {
+          "label": "fake",
+          "person": 2387,
+          "public_figure": 0,
+          "rows": 3586,
+          "type": "base"
+        },
+        "nano-banana-pro": {
+          "label": "fake",
+          "person": 241,
+          "public_figure": 0,
+          "rows": 386,
+          "type": "video"
+        },
+        "recraft-v2": {
+          "label": "fake",
+          "person": 67,
+          "public_figure": 1,
+          "rows": 282,
+          "type": "base"
+        },
+        "recraft-v3": {
+          "label": "fake",
+          "person": 462,
+          "public_figure": 0,
+          "rows": 1000,
+          "type": "base"
+        },
+        "seedream-v5.0": {
+          "label": "fake",
+          "person": 302,
+          "public_figure": 0,
+          "rows": 372,
+          "type": "image"
+        },
+        "sora-2": {
+          "label": "fake",
+          "person": 279,
+          "public_figure": 0,
+          "rows": 557,
+          "type": "image"
+        },
+        "veo-3": {
+          "label": "fake",
+          "person": 1174,
+          "public_figure": 0,
+          "rows": 2169,
+          "type": "video"
+        },
+        "wan-video-2.5": {
+          "label": "fake",
+          "person": 706,
+          "public_figure": 0,
+          "rows": 1174,
+          "type": "video"
+        },
+        "z-image-turbo": {
+          "label": "fake",
+          "person": 10088,
+          "public_figure": 46,
+          "rows": 12633,
+          "type": "Base"
+        }
+      },
+      "person": 43640,
+      "public_figure": 162,
+      "rows": 91397
+    },
+    "core/train": {
+      "labels": {
+        "fake": 1146806,
+        "real": 1153228
+      },
+      "models": {
+        "amateur-photography-v2.0": {
+          "label": "fake",
+          "person": 266,
+          "public_figure": 3,
+          "rows": 376,
+          "type": "image"
+        },
+        "amateur-photography-v5-final": {
+          "label": "fake",
+          "person": 190,
+          "public_figure": 1,
+          "rows": 329,
+          "type": "image"
+        },
+        "amateur-photography-v6": {
+          "label": "fake",
+          "person": 919,
+          "public_figure": 0,
+          "rows": 1301,
+          "type": "image"
+        },
+        "anima-preview": {
+          "label": "fake",
+          "person": 2084,
+          "public_figure": 0,
+          "rows": 3698,
+          "type": "image"
+        },
+        "anima-preview2": {
+          "label": "fake",
+          "person": 895,
+          "public_figure": 0,
+          "rows": 1880,
+          "type": "image"
+        },
+        "animagine-xl-3.0": {
+          "label": "fake",
+          "person": 2903,
+          "public_figure": 2,
+          "rows": 3455,
+          "type": "Fine-tune"
+        },
+        "animagine-xl-3.1": {
+          "label": "fake",
+          "person": 2953,
+          "public_figure": 6,
+          "rows": 3453,
+          "type": "Fine-tune"
+        },
+        "animagine-xl-4.0": {
+          "label": "fake",
+          "person": 2590,
+          "public_figure": 0,
+          "rows": 3489,
+          "type": "Fine-tune"
+        },
+        "chroma": {
+          "label": "fake",
+          "person": 3933,
+          "public_figure": 197,
+          "rows": 5643,
+          "type": "base"
+        },
+        "cyberrealistic-pony-v14.0": {
+          "label": "fake",
+          "person": 1133,
+          "public_figure": 0,
+          "rows": 1692,
+          "type": "image"
+        },
+        "cyberrealistic-pony-v14.1": {
+          "label": "fake",
+          "person": 3087,
+          "public_figure": 0,
+          "rows": 4636,
+          "type": "image"
+        },
+        "cyberrealistic-pony-v15.0": {
+          "label": "fake",
+          "person": 1498,
+          "public_figure": 0,
+          "rows": 2708,
+          "type": "image"
+        },
+        "cyberrealistic-pony-v16.0": {
+          "label": "fake",
+          "person": 1687,
+          "public_figure": 0,
+          "rows": 2618,
+          "type": "image"
+        },
+        "cyberrealistic-pony-v17.0": {
+          "label": "fake",
+          "person": 860,
+          "public_figure": 0,
+          "rows": 1549,
+          "type": "image"
+        },
+        "cyberrealistic-xl-v10.0": {
+          "label": "fake",
+          "person": 112,
+          "public_figure": 0,
+          "rows": 329,
+          "type": "image"
+        },
+        "cyberrealistic-xl-v9.0": {
+          "label": "fake",
+          "person": 1427,
+          "public_figure": 2,
+          "rows": 3181,
+          "type": "image"
+        },
+        "dalle-3": {
+          "label": "fake",
+          "person": 29188,
+          "public_figure": 0,
+          "rows": 32836,
+          "type": "base"
+        },
+        "flux-1.1-pro": {
+          "label": "fake",
+          "person": 23252,
+          "public_figure": 1222,
+          "rows": 29423,
+          "type": "base"
+        },
+        "flux-amateursnapshotphotos": {
+          "label": "fake",
+          "person": 2878,
+          "public_figure": 167,
+          "rows": 3639,
+          "type": "lora"
+        },
+        "flux-mvc5000": {
+          "label": "fake",
+          "person": 12444,
+          "public_figure": 710,
+          "rows": 15732,
+          "type": "lora"
+        },
+        "flux-realism": {
+          "label": "fake",
+          "person": 1396,
+          "public_figure": 7,
+          "rows": 1500,
+          "type": "lora"
+        },
+        "flux.1-dev": {
+          "label": "fake",
+          "person": 88717,
+          "public_figure": 4917,
+          "rows": 114380,
+          "type": "base"
+        },
+        "flux.1-schnell": {
+          "label": "fake",
+          "person": 33475,
+          "public_figure": 1772,
+          "rows": 41312,
+          "type": "base"
+        },
+        "flux.2-dev": {
+          "label": "fake",
+          "person": 12292,
+          "public_figure": 101,
+          "rows": 15259,
+          "type": "Base"
+        },
+        "flux.2-klein-4b": {
+          "label": "fake",
+          "person": 7134,
+          "public_figure": 17,
+          "rows": 7459,
+          "type": "Base"
+        },
+        "flux.2-klein-base-4b": {
+          "label": "fake",
+          "person": 7048,
+          "public_figure": 6,
+          "rows": 7431,
+          "type": "Base"
+        },
+        "gpt-image-1": {
+          "label": "fake",
+          "person": 30559,
+          "public_figure": 1069,
+          "rows": 42144,
+          "type": "base"
+        },
+        "grok-2-image-1212": {
+          "label": "fake",
+          "person": 7404,
+          "public_figure": 448,
+          "rows": 9303,
+          "type": "base"
+        },
+        "grok-imagine": {
+          "label": "fake",
+          "person": 865,
+          "public_figure": 0,
+          "rows": 1294,
+          "type": "image"
+        },
+        "hidream-i1-full": {
+          "label": "fake",
+          "person": 22192,
+          "public_figure": 1256,
+          "rows": 28234,
+          "type": "base"
+        },
+        "hunyuan-video": {
+          "label": "fake",
+          "person": 565,
+          "public_figure": 0,
+          "rows": 751,
+          "type": "video"
+        },
+        "ideogram-3.0": {
+          "label": "fake",
+          "person": 22263,
+          "public_figure": 1160,
+          "rows": 27995,
+          "type": "base"
+        },
+        "imagen-3.0-002": {
+          "label": "fake",
+          "person": 2698,
+          "public_figure": 46,
+          "rows": 3532,
+          "type": "base"
+        },
+        "imagen-4.0": {
+          "label": "fake",
+          "person": 9827,
+          "public_figure": 522,
+          "rows": 14255,
+          "type": "base"
+        },
+        "kling-video-v2.5-turbo": {
+          "label": "fake",
+          "person": 100,
+          "public_figure": 0,
+          "rows": 210,
+          "type": "video"
+        },
+        "kolors-v1.0": {
+          "label": "fake",
+          "person": 1187,
+          "public_figure": 1,
+          "rows": 2201,
+          "type": "image"
+        },
+        "laion": {
+          "label": "real",
+          "person": 471934,
+          "public_figure": 28780,
+          "rows": 597522,
+          "type": "real"
+        },
+        "look-back-wan2.1-t2v-14b-v1.0": {
+          "label": "fake",
+          "person": 591,
+          "public_figure": 0,
+          "rows": 622,
+          "type": "video"
+        },
+        "ltxv-2.3": {
+          "label": "fake",
+          "person": 523,
+          "public_figure": 0,
+          "rows": 671,
+          "type": "video"
+        },
+        "midjourney-6": {
+          "label": "fake",
+          "person": 22049,
+          "public_figure": 1,
+          "rows": 49500,
+          "type": "base"
+        },
+        "mystic": {
+          "label": "fake",
+          "person": 12009,
+          "public_figure": 759,
+          "rows": 15108,
+          "type": "finetune"
+        },
+        "nano-banana-2": {
+          "label": "fake",
+          "person": 1251,
+          "public_figure": 1,
+          "rows": 1985,
+          "type": "image"
+        },
+        "noobai": {
+          "label": "fake",
+          "person": 139,
+          "public_figure": 0,
+          "rows": 223,
+          "type": "image"
+        },
+        "novaanimexl_ilv140": {
+          "label": "fake",
+          "person": 6056,
+          "public_figure": 0,
+          "rows": 7463,
+          "type": "Base"
+        },
+        "one-obsession-17-red-sdxl": {
+          "label": "fake",
+          "person": 2898,
+          "public_figure": 0,
+          "rows": 3470,
+          "type": "Fine-tune"
+        },
+        "openflux.1": {
+          "label": "fake",
+          "person": 1047,
+          "public_figure": 0,
+          "rows": 1129,
+          "type": "LoRA"
+        },
+        "pexels": {
+          "label": "real",
+          "person": 311693,
+          "public_figure": 235,
+          "rows": 555706,
+          "type": "real"
+        },
+        "playground-v2.5-1024px-aesthetic": {
+          "label": "fake",
+          "person": 6851,
+          "public_figure": 3,
+          "rows": 7407,
+          "type": "Base"
+        },
+        "pony": {
+          "label": "fake",
+          "person": 888,
+          "public_figure": 0,
+          "rows": 1249,
+          "type": "image"
+        },
+        "qwen-image": {
+          "label": "fake",
+          "person": 6907,
+          "public_figure": 10,
+          "rows": 7428,
+          "type": "Base"
+        },
+        "realistic_vision_v5.1_novae": {
+          "label": "fake",
+          "person": 6877,
+          "public_figure": 9,
+          "rows": 7450,
+          "type": "Base"
+        },
+        "realvisxl_v4.0": {
+          "label": "fake",
+          "person": 158,
+          "public_figure": 0,
+          "rows": 165,
+          "type": "LoRA"
+        },
+        "sd-1.5": {
+          "label": "fake",
+          "person": 15946,
+          "public_figure": 935,
+          "rows": 20420,
+          "type": "base"
+        },
+        "sd-1.5-dreamshaper": {
+          "label": "fake",
+          "person": 31062,
+          "public_figure": 149,
+          "rows": 34052,
+          "type": "finetune"
+        },
+        "sd-1.5-epicdream": {
+          "label": "fake",
+          "person": 17844,
+          "public_figure": 114,
+          "rows": 19500,
+          "type": "finetune"
+        },
+        "sd-2.1": {
+          "label": "fake",
+          "person": 106648,
+          "public_figure": 6342,
+          "rows": 134986,
+          "type": "base"
+        },
+        "sd-3.5": {
+          "label": "fake",
+          "person": 125530,
+          "public_figure": 1273,
+          "rows": 138614,
+          "type": "base"
+        },
+        "sd-turbo": {
+          "label": "fake",
+          "person": 6471,
+          "public_figure": 12,
+          "rows": 7401,
+          "type": "Base"
+        },
+        "sd-xl-v1.0-vae-fix": {
+          "label": "fake",
+          "person": 1715,
+          "public_figure": 3,
+          "rows": 6971,
+          "type": "image"
+        },
+        "sdxl": {
+          "label": "fake",
+          "person": 31165,
+          "public_figure": 1833,
+          "rows": 39500,
+          "type": "base-refined"
+        },
+        "sdxl-1.0": {
+          "label": "fake",
+          "person": 865,
+          "public_figure": 6,
+          "rows": 2426,
+          "type": "image"
+        },
+        "sdxl-epic-realism": {
+          "label": "fake",
+          "person": 46942,
+          "public_figure": 2920,
+          "rows": 59269,
+          "type": "finetune"
+        },
+        "sdxl-juggernaut": {
+          "label": "fake",
+          "person": 19038,
+          "public_figure": 1174,
+          "rows": 24268,
+          "type": "finetune"
+        },
+        "sdxl-realvis-v5": {
+          "label": "fake",
+          "person": 26324,
+          "public_figure": 205,
+          "rows": 28800,
+          "type": "finetune"
+        },
+        "sdxl-touchofrealism": {
+          "label": "fake",
+          "person": 25538,
+          "public_figure": 1573,
+          "rows": 32328,
+          "type": "lora"
+        },
+        "sdxl-turbo": {
+          "label": "fake",
+          "person": 6718,
+          "public_figure": 36,
+          "rows": 7447,
+          "type": "Base"
+        },
+        "seedream-v4.0": {
+          "label": "fake",
+          "person": 1288,
+          "public_figure": 2,
+          "rows": 2422,
+          "type": "image"
+        },
+        "seedream-v4.5": {
+          "label": "fake",
+          "person": 1483,
+          "public_figure": 0,
+          "rows": 2205,
+          "type": "image"
+        },
+        "stable-diffusion-v1-4": {
+          "label": "fake",
+          "person": 6610,
+          "public_figure": 19,
+          "rows": 7290,
+          "type": "Base"
+        },
+        "stable-diffusion-v1-5": {
+          "label": "fake",
+          "person": 13781,
+          "public_figure": 28,
+          "rows": 15142,
+          "type": "Base"
+        },
+        "stable-diffusion-xl-base-1.0": {
+          "label": "fake",
+          "person": 3455,
+          "public_figure": 6,
+          "rows": 3741,
+          "type": "Fine-tune"
+        },
+        "studio-ghibli-wan2.1-t2v-14b-v1.0": {
+          "label": "fake",
+          "person": 5079,
+          "public_figure": 0,
+          "rows": 5618,
+          "type": "video"
+        },
+        "tiny-random-sana": {
+          "label": "fake",
+          "person": 0,
+          "public_figure": 0,
+          "rows": 7431,
+          "type": "Base"
+        },
+        "twbabeflux-v1": {
+          "label": "fake",
+          "person": 459,
+          "public_figure": 0,
+          "rows": 470,
+          "type": "video"
+        },
+        "wan-video-2.1": {
+          "label": "fake",
+          "person": 464,
+          "public_figure": 0,
+          "rows": 716,
+          "type": "video"
+        },
+        "wan-video-2.2": {
+          "label": "fake",
+          "person": 2072,
+          "public_figure": 0,
+          "rows": 2692,
+          "type": "video"
+        }
+      },
+      "person": 1690389,
+      "public_figure": 60060,
+      "rows": 2300034
+    },
+    "core/validation": {
+      "labels": {
+        "fake": 28955,
+        "real": 29498
+      },
+      "models": {
+        "anima-preview": {
+          "label": "fake",
+          "person": 263,
+          "public_figure": 0,
+          "rows": 500,
+          "type": "image"
+        },
+        "anima-preview2": {
+          "label": "fake",
+          "person": 249,
+          "public_figure": 0,
+          "rows": 500,
+          "type": "image"
+        },
+        "animagine-xl-3.0": {
+          "label": "fake",
+          "person": 417,
+          "public_figure": 0,
+          "rows": 500,
+          "type": "Fine-tune"
+        },
+        "animagine-xl-3.1": {
+          "label": "fake",
+          "person": 435,
+          "public_figure": 0,
+          "rows": 500,
+          "type": "Fine-tune"
+        },
+        "animagine-xl-4.0": {
+          "label": "fake",
+          "person": 372,
+          "public_figure": 0,
+          "rows": 500,
+          "type": "Fine-tune"
+        },
+        "chroma": {
+          "label": "fake",
+          "person": 342,
+          "public_figure": 13,
+          "rows": 500,
+          "type": "base"
+        },
+        "cyberrealistic-pony-v14.0": {
+          "label": "fake",
+          "person": 318,
+          "public_figure": 0,
+          "rows": 500,
+          "type": "image"
+        },
+        "cyberrealistic-pony-v14.1": {
+          "label": "fake",
+          "person": 332,
+          "public_figure": 0,
+          "rows": 500,
+          "type": "image"
+        },
+        "cyberrealistic-pony-v15.0": {
+          "label": "fake",
+          "person": 287,
+          "public_figure": 0,
+          "rows": 500,
+          "type": "image"
+        },
+        "cyberrealistic-pony-v16.0": {
+          "label": "fake",
+          "person": 340,
+          "public_figure": 0,
+          "rows": 500,
+          "type": "image"
+        },
+        "cyberrealistic-xl-v9.0": {
+          "label": "fake",
+          "person": 216,
+          "public_figure": 0,
+          "rows": 500,
+          "type": "image"
+        },
+        "dalle-3": {
+          "label": "fake",
+          "person": 446,
+          "public_figure": 0,
+          "rows": 500,
+          "type": "base"
+        },
+        "flux-1.1-pro": {
+          "label": "fake",
+          "person": 388,
+          "public_figure": 23,
+          "rows": 500,
+          "type": "base"
+        },
+        "flux-amateursnapshotphotos": {
+          "label": "fake",
+          "person": 383,
+          "public_figure": 13,
+          "rows": 500,
+          "type": "lora"
+        },
+        "flux-mvc5000": {
+          "label": "fake",
+          "person": 385,
+          "public_figure": 30,
+          "rows": 500,
+          "type": "lora"
+        },
+        "flux-realism": {
+          "label": "fake",
+          "person": 460,
+          "public_figure": 1,
+          "rows": 500,
+          "type": "lora"
+        },
+        "flux.1-dev": {
+          "label": "fake",
+          "person": 387,
+          "public_figure": 28,
+          "rows": 499,
+          "type": "base"
+        },
+        "flux.1-schnell": {
+          "label": "fake",
+          "person": 416,
+          "public_figure": 19,
+          "rows": 500,
+          "type": "base"
+        },
+        "flux.2-dev": {
+          "label": "fake",
+          "person": 418,
+          "public_figure": 4,
+          "rows": 500,
+          "type": "Base"
+        },
+        "flux.2-klein-4b": {
+          "label": "fake",
+          "person": 480,
+          "public_figure": 1,
+          "rows": 500,
+          "type": "Base"
+        },
+        "flux.2-klein-base-4b": {
+          "label": "fake",
+          "person": 472,
+          "public_figure": 0,
+          "rows": 500,
+          "type": "Base"
+        },
+        "gpt-image-1": {
+          "label": "fake",
+          "person": 356,
+          "public_figure": 19,
+          "rows": 500,
+          "type": "base"
+        },
+        "grok-2-image-1212": {
+          "label": "fake",
+          "person": 371,
+          "public_figure": 27,
+          "rows": 500,
+          "type": "base"
+        },
+        "hidream-i1-full": {
+          "label": "fake",
+          "person": 393,
+          "public_figure": 31,
+          "rows": 500,
+          "type": "base"
+        },
+        "ideogram-3.0": {
+          "label": "fake",
+          "person": 394,
+          "public_figure": 14,
+          "rows": 500,
+          "type": "base"
+        },
+        "imagen-3.0-002": {
+          "label": "fake",
+          "person": 378,
+          "public_figure": 7,
+          "rows": 500,
+          "type": "base"
+        },
+        "imagen-4.0": {
+          "label": "fake",
+          "person": 348,
+          "public_figure": 22,
+          "rows": 500,
+          "type": "base"
+        },
+        "kolors-v1.0": {
+          "label": "fake",
+          "person": 256,
+          "public_figure": 0,
+          "rows": 500,
+          "type": "image"
+        },
+        "laion": {
+          "label": "real",
+          "person": 14685,
+          "public_figure": 910,
+          "rows": 18609,
+          "type": "real"
+        },
+        "midjourney-6": {
+          "label": "fake",
+          "person": 219,
+          "public_figure": 0,
+          "rows": 500,
+          "type": "base"
+        },
+        "mystic": {
+          "label": "fake",
+          "person": 385,
+          "public_figure": 22,
+          "rows": 500,
+          "type": "finetune"
+        },
+        "nano-banana-2": {
+          "label": "fake",
+          "person": 284,
+          "public_figure": 0,
+          "rows": 500,
+          "type": "image"
+        },
+        "novaanimexl_ilv140": {
+          "label": "fake",
+          "person": 414,
+          "public_figure": 0,
+          "rows": 500,
+          "type": "Base"
+        },
+        "one-obsession-17-red-sdxl": {
+          "label": "fake",
+          "person": 418,
+          "public_figure": 0,
+          "rows": 500,
+          "type": "Fine-tune"
+        },
+        "pexels": {
+          "label": "real",
+          "person": 6100,
+          "public_figure": 2,
+          "rows": 10889,
+          "type": "real"
+        },
+        "playground-v2.5-1024px-aesthetic": {
+          "label": "fake",
+          "person": 474,
+          "public_figure": 0,
+          "rows": 500,
+          "type": "Base"
+        },
+        "qwen-image": {
+          "label": "fake",
+          "person": 460,
+          "public_figure": 1,
+          "rows": 500,
+          "type": "Base"
+        },
+        "realistic_vision_v5.1_novae": {
+          "label": "fake",
+          "person": 463,
+          "public_figure": 1,
+          "rows": 500,
+          "type": "Base"
+        },
+        "sd-1.5": {
+          "label": "fake",
+          "person": 379,
+          "public_figure": 23,
+          "rows": 494,
+          "type": "base"
+        },
+        "sd-1.5-dreamshaper": {
+          "label": "fake",
+          "person": 448,
+          "public_figure": 2,
+          "rows": 480,
+          "type": "finetune"
+        },
+        "sd-1.5-epicdream": {
+          "label": "fake",
+          "person": 452,
+          "public_figure": 3,
+          "rows": 500,
+          "type": "finetune"
+        },
+        "sd-2.1": {
+          "label": "fake",
+          "person": 402,
+          "public_figure": 21,
+          "rows": 500,
+          "type": "base"
+        },
+        "sd-3.5": {
+          "label": "fake",
+          "person": 436,
+          "public_figure": 3,
+          "rows": 500,
+          "type": "base"
+        },
+        "sd-turbo": {
+          "label": "fake",
+          "person": 433,
+          "public_figure": 1,
+          "rows": 500,
+          "type": "Base"
+        },
+        "sd-xl-v1.0-vae-fix": {
+          "label": "fake",
+          "person": 120,
+          "public_figure": 0,
+          "rows": 500,
+          "type": "image"
+        },
+        "sdxl": {
+          "label": "fake",
+          "person": 396,
+          "public_figure": 20,
+          "rows": 500,
+          "type": "base"
+        },
+        "sdxl-1.0": {
+          "label": "fake",
+          "person": 167,
+          "public_figure": 0,
+          "rows": 500,
+          "type": "image"
+        },
+        "sdxl-epic-realism": {
+          "label": "fake",
+          "person": 376,
+          "public_figure": 30,
+          "rows": 500,
+          "type": "finetune"
+        },
+        "sdxl-juggernaut": {
+          "label": "fake",
+          "person": 388,
+          "public_figure": 23,
+          "rows": 500,
+          "type": "finetune"
+        },
+        "sdxl-realvis-v5": {
+          "label": "fake",
+          "person": 468,
+          "public_figure": 4,
+          "rows": 500,
+          "type": "finetune"
+        },
+        "sdxl-touchofrealism": {
+          "label": "fake",
+          "person": 389,
+          "public_figure": 27,
+          "rows": 500,
+          "type": "lora"
+        },
+        "sdxl-turbo": {
+          "label": "fake",
+          "person": 454,
+          "public_figure": 3,
+          "rows": 500,
+          "type": "Base"
+        },
+        "seedream-v4.0": {
+          "label": "fake",
+          "person": 247,
+          "public_figure": 0,
+          "rows": 500,
+          "type": "image"
+        },
+        "seedream-v4.5": {
+          "label": "fake",
+          "person": 348,
+          "public_figure": 0,
+          "rows": 500,
+          "type": "image"
+        },
+        "stable-diffusion-v1-4": {
+          "label": "fake",
+          "person": 428,
+          "public_figure": 0,
+          "rows": 487,
+          "type": "Base"
+        },
+        "stable-diffusion-v1-5": {
+          "label": "fake",
+          "person": 464,
+          "public_figure": 1,
+          "rows": 495,
+          "type": "Base"
+        },
+        "stable-diffusion-xl-base-1.0": {
+          "label": "fake",
+          "person": 454,
+          "public_figure": 1,
+          "rows": 500,
+          "type": "Fine-tune"
+        },
+        "studio-ghibli-wan2.1-t2v-14b-v1.0": {
+          "label": "fake",
+          "person": 435,
+          "public_figure": 0,
+          "rows": 500,
+          "type": "video"
+        },
+        "tiny-random-sana": {
+          "label": "fake",
+          "person": 0,
+          "public_figure": 0,
+          "rows": 500,
+          "type": "Base"
+        },
+        "wan-video-2.2": {
+          "label": "fake",
+          "person": 371,
+          "public_figure": 0,
+          "rows": 500,
+          "type": "video"
+        }
+      },
+      "person": 42259,
+      "public_figure": 1350,
+      "rows": 58453
+    },
+    "reddit/test": {
+      "labels": {
+        "fake": 28973,
+        "real": 7114
+      },
+      "models": {
+        "reddit": {
+          "label": "fake/real",
+          "person": 22034,
+          "public_figure": 37,
+          "rows": 36087,
+          "type": "video"
+        }
+      },
+      "person": 22034,
+      "public_figure": 37,
+      "rows": 36087
+    }
+  }
+}
