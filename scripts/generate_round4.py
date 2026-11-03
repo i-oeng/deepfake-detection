@@ -33,6 +33,9 @@ free (another process, such as an Ollama model, holds it), and with status 4 whe
 the disk has less than ``MIN_FREE_DISK`` free.
 
 Run with the isolated diffusers install of round 2: ``PYTHONPATH=.genlibs:src``.
+SD 3.5 also needs ``protobuf`` (6.33.6 on xixi, in ``.genlibs``): its T5 tokenizer
+config sets ``add_prefix_space``, so transformers rebuilds the fast tokenizer from
+the SentencePiece model on load.
 """
 
 from __future__ import annotations

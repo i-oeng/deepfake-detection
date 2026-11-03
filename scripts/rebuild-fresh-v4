@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+# Build the fresh open-world test set (v4) for round 4: catalog with format
+# matching, materialize, preliminary manifest, drop photos that repeat earlier data
+# or each other, final manifest, shortcut probe, evaluation config. Sources come
+# from scripts/download_*_round4.py and scripts/generate_round4.py; each step
+# writes runtime/fresh4_<n>_<step>.json.
+set -euo pipefail
+umask 0007
+project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$project_root"
+export PYTHONPATH="$project_root/src"
+python="${PYTHON:-$HOME/deepfake-detection/.venv/bin/python}"
+workers="${WORKERS:-8}"
+subset=data/subsets/openworld_fresh_v4
+images=data/raw/fresh_v4_images
+mkdir -p runtime "$subset"
+
+"$python" -m deepfake_detection.data.fresh_v4 catalog \
+  --downloads-root data/raw --output "$subset/catalog_selected.csv" \
+  --encodings "$subset/encodings.csv" > runtime/fresh4_1_catalog.json
+"$python" -m deepfake_detection.data.openworld materialize \
+  --catalog "$subset/catalog_selected.csv" --downloads-root data/raw \
+  --data-root "$images" --output "$subset/catalog_materialized.csv" \
+  --workers "$workers" --size-at-original-resolution --encodings "$subset/encodings.csv" \
+  > runtime/fresh4_2_materialize.json
+# The dataset config reads catalog.csv: first all rows, then rows without leaks.
+cp "$subset/catalog_materialized.csv" "$subset/catalog.csv"
+"$python" -m deepfake_detection.data.cli build \
+  --config configs/datasets/openworld_fresh_v4.yaml > runtime/fresh4_3_manifest_unfiltered.json
+unfiltered="$("$python" -c \
+  "import json; print(json.load(open('runtime/fresh4_3_manifest_unfiltered.json'))['manifest'])")"
+# Earlier data: round 3 (training, validation and retired test) and fresh v2 and v3.
+"$python" -m deepfake_detection.data.fresh_v4 drop-leaks \
+  --catalog "$subset/catalog_materialized.csv" --manifest-dir "$(dirname "$unfiltered")" \
+  --data-root "$images" \
+  --reference data/manifests/df40_openworld_round3/e4dd0240af9df4c60b0c data/raw/df40_openworld \
+  --reference data/manifests/openworld_fresh_v2/b209f9bcef05d95af5c1 data/raw/fresh_v2_images \
+  --reference data/manifests/openworld_fresh_v3/f8fb7343da06e7a81dd7 data/raw/fresh_v3_images \
+  --output "$subset/catalog.csv" --workers "$workers" > runtime/fresh4_4_leaks.json
+"$python" -m deepfake_detection.data.cli build \
+  --config configs/datasets/openworld_fresh_v4.yaml > runtime/fresh4_5_manifest.json
+final="$("$python" -c \
+  "import json; print(json.load(open('runtime/fresh4_5_manifest.json'))['manifest'])")"
+"$python" scripts/shortcut_probe.py --manifest "$final" --data-root "$images" \
+  --splits test --output reports/openworld/fresh_v4_shortcut_probe.json --workers "$workers"
+FINAL="$final" "$python" - <<'PY'
+import hashlib
+import os
+from pathlib import Path
+
+manifest = Path(os.environ["FINAL"])
+digest = hashlib.sha256(manifest.read_bytes()).hexdigest()
+Path("configs/evaluation/openworld_fresh_v4.yaml").write_text(f"""evaluation:
+  # Fresh test-only set for round 4 (reports/openworld/round4_protocol.md). Score
+  # each finalist once with `deepfake_detection.train.openworld score-manifest`.
+  name: openworld_fresh_v4
+  manifest_dir: data/manifests/openworld_fresh_v4/{manifest.parent.name}
+  manifest_id: {manifest.parent.name}
+  manifest_sha256: {digest}
+  data_root: data/raw/fresh_v4_images
+  require_cuda: true
+  batch_size: 32
+  workers: 8
+""", encoding="utf-8")
+PY
+echo "fresh v4 test set rebuilt: $final"

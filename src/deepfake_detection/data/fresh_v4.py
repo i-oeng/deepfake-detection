@@ -22,7 +22,9 @@ as distributed, so the source-format gap (PNG-source against JPEG-source fakes)
 measures how far a model relies on format.
 
 Every row is a ``test`` row; ``openworld materialize --size-at-original-resolution
---encodings`` then canonicalizes each slice as one collection.
+--encodings`` then canonicalizes each slice as one collection, and ``drop-leaks``
+removes photos that repeat earlier data or each other (``scripts/rebuild-fresh-v4``
+runs the whole build).
 """
 
 from __future__ import annotations
@@ -36,7 +38,19 @@ from collections import Counter
 from pathlib import Path, PurePosixPath
 
 from .format_match import Source, assign, write_encodings
+from .leakage import (
+    NEAR_DUPLICATE_CORRELATION,
+    Reference,
+    exact_hits,
+    histogram,
+    nearest_correlation,
+    reserved_fingerprints,
+    thumbnails,
+)
+from .manifest import verify_manifest
 from .openworld import COLUMNS, EFS, _rank, _row
+from .prune import FINGERPRINTS
+from .round2 import _read_csv, _read_manifest, _write_catalog
 
 SPLIT = "test"
 SEED = "fresh-v4-20261103"
@@ -85,6 +99,11 @@ def _face_row(slice_name: str, label: str, source: str, record: dict,
                 frame=PurePosixPath(record["path"]).name, entities=(entity,),
                 archive=archive, member=record["path"], preprocess=f"canonical:{slice_name}",
                 identity=entity)
+
+
+def _group(row: dict[str, str]) -> str:
+    """``<slice>/<label>-<source>`` of a catalog row, for the counts."""
+    return f"{row['source_domain']}/{row['video_id'].split(':', 1)[1].rsplit('-', 1)[0]}"
 
 
 def _source(row: dict[str, str], record: dict) -> Source:
@@ -155,16 +174,83 @@ def build_catalog(downloads_root: Path, output: Path, encodings: Path, *, seed: 
         writer.writeheader()
         writer.writerows(rows)
     assignments, matching = assign(sources)
-    counts = Counter((row["source_domain"], row["video_id"].split(":", 1)[1].rsplit("-", 1)[0])
-                     for row in rows)
+    counts = Counter(_group(row) for row in rows)
     return {
         "catalog": str(output), "rows": len(rows), "seed": seed,
         "sha256": hashlib.sha256(output.read_bytes()).hexdigest(),
-        "counts": {"/".join(key): value for key, value in sorted(counts.items())},
+        "counts": dict(sorted(counts.items())),
         "encodings": str(encodings), "encodings_sha256": write_encodings(encodings, assignments),
         "format_matching": matching,
         "unused_openimages_faces": len(openimages) - seen_fill - len(topup),
     }
+
+
+def drop_leaks(catalog: Path, manifest_dir: Path, data_root: Path,
+               references: list[Reference], output: Path, *,
+               threshold: float = NEAR_DUPLICATE_CORRELATION, workers: int = 8) -> dict:
+    """Remove fresh v4 photos that repeat earlier data or each other.
+
+    ``manifest_dir`` is a preliminary fresh v4 build, which fingerprints every
+    canonical crop. ``references`` are the earlier manifests with their data roots
+    (round 3's training, validation and retired test rows, fresh v2 and v3), all
+    rows of which count. A photo goes when it matches a reference image under the
+    leakage control (``data.leakage``), or when it matches a fresh v4 photo earlier
+    in ``image_id`` order, so one of two copies inside fresh v4 stays. Each photo
+    is its own video group.
+
+    Round 4's training additions do not exist yet; their build removes whatever
+    matches fresh v4, under the same control.
+    """
+    for directory in (manifest_dir, *(directory for directory, _ in references)):
+        valid, errors = verify_manifest(directory)
+        if not valid:
+            raise ValueError(f"invalid immutable manifest {directory}: {errors}")
+    rows = sorted(_read_csv(catalog), key=lambda row: row["image_id"])
+    if len({row["video_id"] for row in rows}) != len(rows):
+        raise ValueError("fresh v4 expects one photo per video group")
+    by_source = {row["source_id"]: row for row in _read_manifest(manifest_dir)}
+    if not {row["image_id"] for row in rows} <= set(by_source):
+        raise ValueError("preliminary manifest does not cover the catalog")
+    fingerprinted = [by_source[row["image_id"]] for row in rows]
+    if any(row["status"] != "ok" for row in fingerprinted):
+        raise ValueError("a fresh v4 image failed decoding")
+    earlier = [(row, root) for directory, root in references
+               for row in _read_manifest(directory)]
+    reserved = reserved_fingerprints([row for row, _ in earlier])
+    own = thumbnails([str(data_root / row["relative_path"]) for row in fingerprinted], workers)
+    correlation = nearest_correlation(
+        own, thumbnails([str(root / row["relative_path"]) for row, root in earlier], workers))
+    within = own @ own.T
+    seen: dict[str, set[str]] = {column: set() for column in FINGERPRINTS}
+    removed: Counter[str] = Counter()
+    hits: Counter[str] = Counter()
+    kept = []
+    for index, (row, fingerprint) in enumerate(zip(rows, fingerprinted, strict=True)):
+        exact = exact_hits(fingerprint, reserved)
+        repeat = exact_hits(fingerprint, seen)
+        reason = (exact[0] if exact else
+                  "thumbnail_correlation" if correlation[index] >= threshold else
+                  f"within_v4:{repeat[0]}" if repeat else
+                  "within_v4:thumbnail_correlation"
+                  if index and within[index, :index].max() >= threshold else "")
+        for column in FINGERPRINTS:
+            if fingerprint[column]:
+                seen[column].add(fingerprint[column])
+        if reason:
+            hits[reason] += 1
+            removed[_group(row)] += 1
+        else:
+            kept.append(row)
+    _write_catalog(output, kept)
+    return {"catalog": str(output), "rows": len(kept), "removed_rows": len(rows) - len(kept),
+            "hits": dict(sorted(hits.items())), "removed": dict(sorted(removed.items())),
+            "counts": dict(sorted(Counter(_group(row) for row in kept).items())),
+            "near_duplicate_correlation": threshold,
+            "nearest_correlation_counts": histogram(correlation),
+            "reference_images": len(earlier),
+            "references": [f"{directory.parent.name}/{directory.name}"
+                           for directory, _ in references],
+            "sha256": hashlib.sha256(output.read_bytes()).hexdigest()}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -175,8 +261,22 @@ def main(argv: list[str] | None = None) -> int:
     catalog.add_argument("--output", type=Path, required=True)
     catalog.add_argument("--encodings", type=Path, required=True)
     catalog.add_argument("--seed", default=SEED)
+    leaks = commands.add_parser("drop-leaks")
+    leaks.add_argument("--catalog", type=Path, required=True)
+    leaks.add_argument("--manifest-dir", type=Path, required=True)
+    leaks.add_argument("--data-root", type=Path, required=True)
+    leaks.add_argument("--reference", nargs=2, type=Path, action="append", required=True,
+                       metavar=("MANIFEST_DIR", "DATA_ROOT"))
+    leaks.add_argument("--output", type=Path, required=True)
+    leaks.add_argument("--workers", type=int, default=8)
     args = parser.parse_args(argv)
-    result = build_catalog(args.downloads_root, args.output, args.encodings, seed=args.seed)
+    if args.command == "catalog":
+        result = build_catalog(args.downloads_root, args.output, args.encodings,
+                               seed=args.seed)
+    else:
+        result = drop_leaks(args.catalog, args.manifest_dir, args.data_root,
+                            [tuple(pair) for pair in args.reference], args.output,
+                            workers=args.workers)
     print(json.dumps(result, indent=2))
     return 0
 
