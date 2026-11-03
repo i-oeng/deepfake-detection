@@ -299,9 +299,12 @@ redistributed:
   units (3,200 photos, from the 1024 px CVDF mirror) gave 2,567 faces (80%,
   0.8 GB); the rest stay unused.
 
-Together that is 3,077 real faces, enough for `v4_photos_seen` (about 1,000) and
-for topping up `v4_photos_unseen` (see open question 1). Both slices report
-false-positive rates per real source.
+Together that is 3,077 real faces. `data/fresh_v4.py` gives `v4_photos_seen` all
+510 Unsplash faces and 490 Open Images faces, and tops up `v4_photos_unseen`'s
+455 ImageNet and DOCCI faces with the next 545 Open Images faces (Open Images
+order: seed `fresh-v4-20261103`); 1,532 Open Images faces stay unused. Keeping
+Unsplash in one slice gives each real source enough photos for its own
+false-positive rate, which both slices report.
 
 ### Fresh v4 seen-slice fakes
 
@@ -322,7 +325,9 @@ descriptions, at 1 MP in five aspect buckets from 832 x 1216 to 1216 x 832. The
 longest prompt is 52 CLIP tokens. About 400 images per generator are planned,
 so about 1,000 faces remain after the face policy. Generated images are
 PNG; the format matching of the training data applies here too, with the reals as
-the reference, so the slice cannot be solved by source format.
+the reference, so the slice cannot be solved by source format. `v4_photos_unseen`
+keeps OpenFake's formats as distributed, so the source-format gap measured on it
+shows how far a model relies on format.
 
 ## Development selection
 
@@ -381,12 +386,16 @@ once.
 Before the protocol freezes:
 
 1. Move round 3's leakage check (exact, pixel, dHash, thumbnail correlation) from
-   `data/round3.py` into a shared module.
+   `data/round3.py` into a shared module. Done: `data/leakage.py`, which round 3
+   now imports unchanged in behavior.
 2. Add a face-embedding identity audit (plan section 11, priority 1, item 2). Name
    matching alone misses the same person under different names or unnamed
    identities.
 3. Report balanced accuracy at a locked threshold in the open-world comparison;
-   it currently reports AUROC and false-positive rates.
+   it currently reports AUROC and false-positive rates. Done as a module,
+   `train/threshold.py` (the threshold rule, the within-label bootstrap with
+   optional identity groups, per-source false-positive rates, and the success
+   rule); the round 4 comparison script will call it.
 4. Extend `deepfake-detect bundle` to open-world runs and seed-averaged logits,
    so a successful model can ship.
 5. Write the round 4 generation script for the celebrity swap tools and the fresh
@@ -405,7 +414,10 @@ Before the protocol freezes:
    `unsplash_round4_det320`, `openimages_round4_det320`).
 7. Implement source format matching in the round 4 manifest build, from the
    recorded `jpeg_quality` and `subsampling`, and the source-format gap in the
-   open-world comparison.
+   open-world comparison. Partly done: `data/format_match.py` assigns the pairs,
+   `openworld materialize --encodings` applies them before detection, and the
+   fresh v4 catalog (`data/fresh_v4.py`) uses them. The training manifest build
+   and the gap remain.
 8. Run the torch tests in CI, since most of the above is torch code.
 
 ## Compute
@@ -455,6 +467,8 @@ hold the GPU.
    interval of roughly ±0.03 on balanced accuracy, against ±0.02 at 1,000) or its
    reals are topped up with about 545 faces from the same pool as
    `v4_photos_seen`, which then differs from its own ImageNet and DOCCI reals.
+   Built with the top-up (2026-11-03); `UNSEEN_REALS` in `data/fresh_v4.py`
+   reverts it.
 2. **Celeb-DF identity cut:** how many swap videos the split drops, and whether
    that is acceptable.
 3. **Success bar:** is 0.85 with a lower bound of 0.80 the right reading of

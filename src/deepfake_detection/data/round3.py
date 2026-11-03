@@ -28,9 +28,20 @@ import argparse
 import hashlib
 import json
 from collections import Counter
-from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path, PurePosixPath
 
+from .leakage import (
+    NEAR_DUPLICATE_CORRELATION,
+    THUMBNAIL_SIDE,  # noqa: F401 (round 3 callers use these names)
+    Reference,
+    evaluation_rows,
+    exact_hits,
+    nearest_correlation,
+    reserved_fingerprints,
+    thumbnail,  # noqa: F401
+    thumbnails,
+)
+from .leakage import histogram as _histogram
 from .manifest import verify_manifest
 from .openworld import EFS, PROTOCOL_ROUND2, PROTOCOL_ROUND3, _rank, _row, method_roles
 from .round2 import (
@@ -55,10 +66,6 @@ RECON_COUNTS = {"recon_movq": 2000, "recon_dcae": 2000}
 POOLS = {**T2I_COUNTS, **RECON_COUNTS}
 # Round 2 collections whose fakes round 3 re-pairs with FairFace photos.
 REPLACED_DOMAINS = frozenset({"round2_kandinsky22", "round2_sana600m"})
-THUMBNAIL_SIDE = 32
-# Thumbnail correlation at or above which two images count as one (calibrated in
-# reports/openworld/round3_protocol.md).
-NEAR_DUPLICATE_CORRELATION = 0.99
 # Share of E9 training images given a black alignment-padding margin.
 PADDING_AUGMENT = 0.5
 
@@ -201,62 +208,9 @@ def combine_additions(round2_additions: Path, round3_additions: Path, output: Pa
             "counts": {"/".join(key): value for key, value in sorted(counts.items())}}
 
 
-def thumbnail(path: str):
-    """A zero-mean, unit-norm 32 x 32 grayscale vector; dot products are correlations."""
-    import numpy as np
-    from PIL import Image
-
-    with Image.open(path) as image:
-        small = image.convert("L").resize((THUMBNAIL_SIDE, THUMBNAIL_SIDE),
-                                          Image.Resampling.BOX)
-    vector = np.asarray(small, dtype=np.float32).ravel()
-    vector -= vector.mean()
-    norm = float(np.linalg.norm(vector))
-    return vector / norm if norm else vector
-
-
-def thumbnails(paths: list[str], workers: int = 8):
-    import numpy as np
-
-    if not paths:
-        return np.zeros((0, THUMBNAIL_SIDE * THUMBNAIL_SIDE), dtype=np.float32)
-    with ProcessPoolExecutor(workers) as pool:
-        return np.stack(list(pool.map(thumbnail, paths, chunksize=64)))
-
-
-def nearest_correlation(queries, references, chunk: int = 1024):
-    """Highest correlation of each query thumbnail with any reference thumbnail."""
-    import numpy as np
-
-    if not len(references):
-        return np.full(len(queries), -1.0, dtype=np.float32)
-    if not len(queries):
-        return np.zeros(0, dtype=np.float32)
-    return np.concatenate([(queries[start:start + chunk] @ references.T).max(axis=1)
-                           for start in range(0, len(queries), chunk)])
-
-
-Reference = tuple[Path, Path]
-
-
 def _evaluation_rows(manifest_dir: Path, data_root: Path,
                      references: list[Reference]) -> list[dict[str, str]]:
-    """Every row a model is scored on, with its image path in ``_path``.
-
-    These are the non-train rows of ``manifest_dir`` (``_own`` set) and all rows of
-    each reference (test-only) manifest.
-    """
-    rows = [{**row, "_path": str(data_root / row["relative_path"]), "_own": True}
-            for row in _read_manifest(manifest_dir) if row["split"] != "train"]
-    for directory, root in references:
-        rows += [{**row, "_path": str(root / row["relative_path"]), "_own": False}
-                 for row in _read_manifest(directory)]
-    return rows
-
-
-def _histogram(values) -> dict[str, int]:
-    edges = (0.8, 0.85, 0.9, 0.93, 0.95, 0.97, 0.98, 0.99)
-    return {f">={edge}": int((values >= edge).sum()) for edge in edges}
+    return evaluation_rows(manifest_dir, data_root, references, read=_read_manifest)
 
 
 def prune_evaluation_overlaps(catalog: Path, manifest_dir: Path, data_root: Path,
@@ -289,9 +243,7 @@ def prune_evaluation_overlaps(catalog: Path, manifest_dir: Path, data_root: Path
         raise ValueError("an addition failed decoding")
     evaluation = _evaluation_rows(manifest_dir, data_root, references)
     scopes = {True: evaluation, False: [row for row in evaluation if not row["_own"]]}
-    reserved = {training: {column: {row[column] for row in rows if row[column]}
-                           for column in FINGERPRINTS}
-                for training, rows in scopes.items()}
+    reserved = {training: reserved_fingerprints(rows) for training, rows in scopes.items()}
     queries = thumbnails([str(data_root / row["relative_path"]) for row in fingerprinted],
                          workers)
     candidates = thumbnails([row["_path"] for row in evaluation], workers)
@@ -304,7 +256,7 @@ def prune_evaluation_overlaps(catalog: Path, manifest_dir: Path, data_root: Path
     remove: set[tuple[str, str]] = set()
     for row, fingerprint, value in zip(additions, fingerprinted, correlation, strict=True):
         scope = reserved[row["split"] == "train"]
-        exact = [column for column in FINGERPRINTS if fingerprint[column] in scope[column]]
+        exact = exact_hits(fingerprint, scope)
         if exact or value >= threshold:
             hits[exact[0] if exact else "thumbnail_correlation"] += 1
             remove.add((row["split"], row["video_id"]))

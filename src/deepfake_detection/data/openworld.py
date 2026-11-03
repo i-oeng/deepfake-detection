@@ -513,6 +513,16 @@ def _read_member(downloads_root: str, archive: str, member: str) -> bytes:
                               capture_output=True).stdout
 
 
+def _source(downloads_root: str, archive: str, member: str, encoding) -> bytes:
+    """A member's bytes, JPEG-encoded first when format matching assigned it a pair."""
+    data = _read_member(downloads_root, archive, member)
+    if encoding is None:
+        return data
+    from .format_match import encode_jpeg
+
+    return encode_jpeg(data, tuple(encoding))
+
+
 def _decode(data: bytes):
     import numpy as np
     from PIL import Image
@@ -522,7 +532,7 @@ def _decode(data: bytes):
         return np.asarray(image.convert("RGB"))
 
 
-def _detect(job: tuple[str, str, str, bool]) -> dict:
+def _detect(job: tuple[str, str, str, bool, tuple | None]) -> dict:
     from deepfake_detection.inference import face
 
     global _DETECTOR
@@ -532,9 +542,9 @@ def _detect(job: tuple[str, str, str, bool]) -> dict:
         # One OpenCV thread per worker process; the pool supplies the parallelism.
         cv2.setNumThreads(1)
         _DETECTOR = face.FaceDetector()
-    downloads_root, archive, member, size_at_original = job
+    downloads_root, archive, member, size_at_original, encoding = job
     try:
-        rgb = _decode(_read_member(downloads_root, archive, member))
+        rgb = _decode(_source(downloads_root, archive, member, encoding))
     except (OSError, ValueError):
         return {"reason": "unreadable_image"}
     # YuNet misses many faces that fill a 1024 px frame; it finds them reliably at
@@ -566,7 +576,7 @@ def _detect(job: tuple[str, str, str, bool]) -> dict:
             "eyes": float(((points[0] - points[1]) ** 2).sum() ** 0.5)}
 
 
-def _canonical(job: tuple[str, str, str, list, float, str]) -> int:
+def _canonical(job: tuple[str, str, str, list, float, str, tuple | None]) -> int:
     """Downscale so the eye distance is at most ``target``, align, and JPEG-encode."""
     import cv2
     import numpy as np
@@ -575,8 +585,8 @@ def _canonical(job: tuple[str, str, str, list, float, str]) -> int:
     from deepfake_detection.inference import face
 
     cv2.setNumThreads(1)
-    downloads_root, archive, member, landmarks, target, destination = job
-    rgb = _decode(_read_member(downloads_root, archive, member))
+    downloads_root, archive, member, landmarks, target, destination, encoding = job
+    rgb = _decode(_source(downloads_root, archive, member, encoding))
     points = np.asarray(landmarks, dtype=np.float64)
     eyes = float(np.linalg.norm(points[0] - points[1]))
     scale = min(1.0, target / eyes)
@@ -595,13 +605,17 @@ def _canonical(job: tuple[str, str, str, list, float, str]) -> int:
 
 
 def materialize(catalog: Path, downloads_root: Path, data_root: Path, output: Path, *,
-                workers: int = 8, size_at_original: bool = False) -> dict:
+                workers: int = 8, size_at_original: bool = False,
+                encodings: dict[str, tuple[int, str]] | None = None) -> dict:
     """Write every catalog image under ``data_root`` and the surviving rows to ``output``.
 
     DF40 crops are copied byte for byte. External collections are canonicalized
     per collection: the target eye distance is the smallest median among its real
     images and each fake method, so no class keeps a resolution advantage.
     Sources named ``dir:<folder>`` hold plain files instead of a ZIP archive.
+    ``encodings`` (``data.format_match``) names canonicalized images to JPEG-encode at
+    a given quality and subsampling before detection, so source format cannot
+    reveal the label.
     """
     with catalog.open(newline="", encoding="utf-8") as stream:
         rows = list(csv.DictReader(stream))
@@ -648,8 +662,12 @@ def materialize(catalog: Path, downloads_root: Path, data_root: Path, output: Pa
                 copied += 1
 
     canonical = [row for row in rows if row["preprocess"] != "copy"]
-    jobs = [(str(downloads_root), row["archive"], row["member"], size_at_original)
-            for row in canonical]
+    encodings = encodings or {}
+    unknown = set(encodings) - {row["image_id"] for row in canonical}
+    if unknown:
+        raise ValueError(f"{len(unknown)} encodings name no canonicalized catalog row")
+    jobs = [(str(downloads_root), row["archive"], row["member"], size_at_original,
+             encodings.get(row["image_id"])) for row in canonical]
     with ProcessPoolExecutor(workers) as pool:
         detections = list(pool.map(_detect, jobs, chunksize=16))
     collections: dict[str, dict[str, list[float]]] = defaultdict(lambda: defaultdict(list))
@@ -677,7 +695,7 @@ def materialize(catalog: Path, downloads_root: Path, data_root: Path, output: Pa
         kept.add(id(row))
         canonical_jobs.append((str(downloads_root), row["archive"], row["member"],
                                found["landmarks"], targets[row["preprocess"]],
-                               str(destination(row))))
+                               str(destination(row)), encodings.get(row["image_id"])))
     with ProcessPoolExecutor(workers) as pool:
         list(pool.map(_canonical, canonical_jobs, chunksize=16))
     surviving = [row for row in rows if id(row) in kept]
@@ -694,6 +712,7 @@ def materialize(catalog: Path, downloads_root: Path, data_root: Path, output: Pa
         "copied": copied,
         "reused": reused,
         "canonicalized": len(canonical_jobs),
+        "jpeg_encoded": sum(job[-1] is not None for job in canonical_jobs),
         "canonical_id": CANONICAL_ID_ORIGINAL_SIZE if size_at_original else CANONICAL_ID,
         "target_eye_distance": {name: round(value, 2) for name, value in targets.items()},
         "selected_canonical": dict(sorted(selected.items())),
@@ -761,6 +780,8 @@ def main(argv: list[str] | None = None) -> int:
     build.add_argument("--workers", type=int, default=8)
     build.add_argument("--size-at-original-resolution", action="store_true",
                        help="apply the minimum face size in source pixels (fresh v2)")
+    build.add_argument("--encodings", type=Path,
+                       help="format matching assignment (data.format_match) to apply")
     deduplicate = commands.add_parser("prune")
     deduplicate.add_argument("--catalog", type=Path, required=True)
     deduplicate.add_argument("--manifest-dir", type=Path, required=True)
@@ -771,9 +792,15 @@ def main(argv: list[str] | None = None) -> int:
     elif args.command == "catalog":
         result = build_catalog(args.downloads_root, args.output, seed=args.seed)
     else:
+        from .format_match import read_encodings
+
+        encodings = read_encodings(args.encodings) if args.encodings else None
         result = materialize(args.catalog, args.downloads_root, args.data_root, args.output,
                              workers=args.workers,
-                             size_at_original=args.size_at_original_resolution)
+                             size_at_original=args.size_at_original_resolution,
+                             encodings=encodings)
+        if args.encodings:
+            result["encodings_sha256"] = hashlib.sha256(args.encodings.read_bytes()).hexdigest()
     print(json.dumps(result, indent=2))
     return 0
 
