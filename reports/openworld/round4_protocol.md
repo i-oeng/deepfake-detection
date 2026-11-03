@@ -1,9 +1,10 @@
 # Open-world training round 4 (draft)
 
-**Status: draft for review, not frozen.** Nothing described here has been built,
-trained, or scored. The protocol freezes once the open questions at the end are
-settled and the fresh v4 test set is built, before any round 4 training data is
-generated.
+**Status: draft for review, not frozen.** Nothing described here has been
+trained or scored. Fresh v4's two photo slices are built (see
+[Fresh v4 build](#fresh-v4-build)); its celebrity slices are not. The protocol
+freezes once the open questions at the end are settled and the fresh v4 test set
+is built, before any round 4 training data is generated.
 
 ## Goal
 
@@ -322,12 +323,50 @@ The grammar (`round4-photo-v1`) is new, not round 2's: one adult (20s to 80s,
 two genders, ten origins) in ten shot types from close-up to documentary,
 twenty-five everyday scenes, ten lighting conditions and six camera
 descriptions, at 1 MP in five aspect buckets from 832 x 1216 to 1216 x 832. The
-longest prompt is 52 CLIP tokens. About 400 images per generator are planned,
-so about 1,000 faces remain after the face policy. Generated images are
+longest prompt is 52 CLIP tokens. Each generator rendered 400 images on xixi
+on 2026-11-04 (00:07 to 09:04, about 20 seconds per SDXL image and 35 per SD 3.5
+image, 1.6 GB of PNG). Generated images are
 PNG; the format matching of the training data applies here too, with the reals as
 the reference, so the slice cannot be solved by source format. `v4_photos_unseen`
 keeps OpenFake's formats as distributed, so the source-format gap measured on it
 shows how far a model relies on format.
+
+### Fresh v4 build
+
+`scripts/rebuild-fresh-v4` (2026-11-04) runs the catalog with format matching,
+materializes and re-detects every face, builds a preliminary manifest, drops
+photos that repeat earlier data or each other (`fresh_v4 drop-leaks`), builds
+the final manifest and runs the shortcut probe. Each step writes
+`runtime/fresh4_<n>_<step>.json` on xixi. The result is manifest
+`c4cdc65a70672c3d1ad2` ([`configs/evaluation/openworld_fresh_v4.yaml`](../../configs/evaluation/openworld_fresh_v4.yaml)),
+4,850 photos, with every rule of the data audit passing.
+
+| Slice | Fakes | Reals | Probe max |
+|---|---|---|---|
+| `v4_photos_seen` | 1,194: SDXL base 398, RealVisXL 399, SD 3.5 Medium 397 | 946: Unsplash 460, Open Images 486 | 0.615 (JPEG size at quality 75) |
+| `v4_photos_unseen` | 1,776 from 16 generators (8 to 227 each) | 934: Open Images 536, ImageNet 272, DOCCI 126 | 0.610 (saturation) |
+
+- **Format matching:** all 999 JPEG reals of `v4_photos_seen` form the reference.
+  The 1,200 generated PNGs and the one PNG real are JPEG-encoded with pairs drawn
+  from it, at a distance of 0.0076 between the two labels' (quality,
+  subsampling) distributions.
+- **Face re-detection:** the build detects faces again on the stored crops, and
+  54 of `v4_photos_seen`'s 1,000 reals fail, 50 of them Unsplash (mostly
+  detection scores just under 0.80). Of the fakes, 6 fail. In
+  `v4_photos_unseen`, 66 reals fail (one an Open Images PNG that Pillow cannot
+  read, its text chunk being over the limit) and 55 fakes. The slices are
+  therefore not exactly 50/50, which balanced accuracy absorbs.
+- **Leakage:** checked against round 3's manifest `e4dd0240af9df4c60b0c`
+  (training, validation and retired test), fresh v2 (`b209f9bcef05d95af5c1`) and
+  fresh v3 (`f8fb7343da06e7a81dd7`), 136,830 images in all, and within fresh v4.
+  Nine photos go, all OpenFake test fakes: five by dHash and one by thumbnail
+  correlation against earlier data (fresh v3 is OpenFakeTiny), and three exact
+  file repeats within the split. No generated image or real is removed. Round 4's
+  training sources are not in the reference: the training build runs the same
+  check with fresh v4 as a reference and removes training rows instead.
+- **Shortcut probe:** both slices stay under the 0.70 report line.
+  [`fresh_v4_shortcut_probe.json`](fresh_v4_shortcut_probe.json) has every
+  statistic.
 
 ## Development selection
 
@@ -402,7 +441,8 @@ Before the protocol freezes:
    v4 seen-slice generators: pinned revisions, CPU offload, and resumable chunks
    so one job does not hold the shared queue for days. The seen-slice part is
    written (`scripts/generate_round4.py t2i`, smoke-tested on xixi with tiny
-   pipelines); the celebrity tools wait for the identity source.
+   pipelines, then run for all 1,200 images on 2026-11-04); the celebrity tools
+   wait for the identity source.
 6. Published data: done. The OpenFake metadata pass
    (`scripts/openfake_metadata.py`, [`openfake_metadata.json`](openfake_metadata.json)),
    the plan B training and `v4_photos_unseen` selections and downloads
@@ -448,7 +488,8 @@ downloads, and 25 GB after fresh v4's reals.
 
 Generation needs the whole GPU: offloaded SDXL peaks near 7 GB. The three
 models take about 7, 7 and 16 GB of disk, so they are downloaded one at a time
-and deleted once their images are done. A run checks that 7 GB of GPU memory are
+and deleted once their images are done. SD 3.5 Medium (16 GB) is still cached
+after generation, with 7.9 GB of disk free. A run checks that 7 GB of GPU memory are
 free before loading a model and otherwise exits, because a process outside the
 queue (on 2026-11-03 an Ollama model of 6.2 GB with a 30 minute keep-alive) can
 hold the GPU.

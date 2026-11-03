@@ -1,0 +1,22 @@
+{
+  "test/v4_photos_seen": {
+    "fake": 1194,
+    "high_frequency_ratio": 0.5869,
+    "images": 2140,
+    "jpeg75_bytes": 0.6145,
+    "laplacian_variance": 0.6062,
+    "luma_std": 0.5025,
+    "max": 0.6145,
+    "saturation": 0.5513
+  },
+  "test/v4_photos_unseen": {
+    "fake": 1776,
+    "high_frequency_ratio": 0.5956,
+    "images": 2710,
+    "jpeg75_bytes": 0.5888,
+    "laplacian_variance": 0.5973,
+    "luma_std": 0.5157,
+    "max": 0.6096,
+    "saturation": 0.6096
+  }
+}
