@@ -110,6 +110,17 @@ training image needs to be generated and everything fits xixi's 8 GB GPU:
   is also in train. The test split's 20 generators never enter training; they
   supply fresh v4's unseen slice. Its reals come from other sources (ImageNet,
   DOCCI) than train's (LAION, Pexels).
+- **SFHQ-T2I selection (2026-11-03).** `scripts/download_sfhq_t2i_round4.py`
+  lists the 22.9 GB zip from its central directory, excludes the 1,724
+  `small-sample.zip` images by name and by SHA-256, takes up to 2,000 images per
+  generator by a seeded hash of the member name (seed `round4-sfhq-20261103`),
+  and fetches each with one range request (10.6 GB streamed, CRC checked). The
+  reals are 9 FFHQ shards of the same pinned mirror fresh v2 used
+  (`gaunernst/ffhq-1024-wds` revision `d74f1f1f`), chosen by the same seed among
+  the 66 no split uses: 04000, 11000, 15000, 25000, 37000, 46000, 47000, 53000
+  and 67000. The face policy kept 9,063 fakes (FLUX.1-schnell 1,996, SDXL
+  1,990, FLUX.1-dev 1,986, FLUX.1-pro 1,981, DALL-E 3 1,110) and all 9,000
+  reals, 11.3 GB in `data/raw/sfhq_round4_det320`.
 - Video-model frames and anime or illustration models are excluded; the target
   is photos.
 - Each dataset's revision is pinned and its license recorded, as round 2 did.
@@ -205,12 +216,18 @@ separate them (next list).
     and Pexels 95, while fake families are each fixed at 75 (DALL-E 3, FLUX.1,
     Grok, Midjourney), 90 or 95 (FLUX.2, Playground, Qwen, SD 1.x). Quality alone
     separates JPEG fakes from JPEG reals at 0.62.
-  - A fake therefore draws from the complement: the collection's real
-    distribution of (quality, subsampling) pairs, scaled to the number of fakes,
-    minus the pairs its JPEG fakes already have (clipped at zero). All fakes
-    together then match the reals. A non-JPEG real draws from the real
-    distribution. Simulated on these crops, the pairs then separate the labels
-    at 0.517 (0.542 when fakes draw from the real distribution instead).
+  - In each collection, the label with more JPEG sources is the reference
+    (OpenFake: the reals). A non-JPEG image of the other label draws from the
+    complement: the reference distribution of (quality, subsampling) pairs,
+    scaled to that label's count, minus the pairs its own JPEG sources already
+    have (clipped at zero). That label as a whole then matches the reference. A
+    non-JPEG image of the reference label draws from the reference distribution.
+    Simulated on the OpenFake crops, the pairs then separate the labels at 0.517
+    (0.542 when fakes draw from the real distribution instead).
+  - SFHQ-T2I is the mirror case: every fake is a JPEG at quality 90 with 4:2:0
+    subsampling and every FFHQ real a lossless WebP, so format alone separates
+    that collection perfectly. Its reference is the fakes, and every FFHQ real is
+    encoded at quality 90, 4:2:0.
 
 ### Leakage control
 
@@ -248,7 +265,7 @@ before identity grouping widens it.
 |---|---|---|---|
 | `v4_photos_seen` | generated on xixi for this test, with our own prompt grammar and a fresh seed namespace, from training families that fit 8 GB with CPU offload (candidates: SDXL base, a photoreal SDXL fine-tune, SD 3.5 Medium) | real photos from a source no split uses | primary |
 | `v4_celebrity` | swaps and identity-preserving generations, with tools used in training, of celebrities absent from training and validation | real photos of the same celebrities | primary |
-| `v4_photos_unseen` | OpenFake `core` test split (68 GB, 13 shards), photo generators only; person-prompt rows: Z-Image Turbo 10,088, FLUX.2 klein 9B 7,641, GPT Image 1.5 3,467, Midjourney 7 2,387, ERNIE-Image 703, Recraft 529, Seedream 5 302, nano-banana-pro 241, GPT Image 2 205, and smaller ones | its ImageNet (8,035) and DOCCI (2,918) person-prompt photos with faces | secondary: how fast the model goes stale |
+| `v4_photos_unseen` | OpenFake `core` test split (68 GB, 13 shards), photo generators only: up to 300 person-prompt rows per generator (seed `round4-openfake-test-20261103`) from 16 generators, of which 1,840 have a face (Z-Image Turbo, FLUX.2 klein 9B, GPT Image 1.5 and 2, Midjourney 7, ERNIE-Image and Turbo, Recraft v2 and v3, Seedream 5, nano-banana-pro, Ideogram 2.0 and four anonymous arena models) | every ImageNet and DOCCI photo in the split was run through the face policy, and only 455 of 45,620 have a face (DOCCI 160, ImageNet 295); most show animals, objects or scenes, and the person heuristic flags captions that mention a hand or a statue | secondary: how fast the model goes stale |
 | `v4_celebrity_wild` | celebrity deepfakes collected online (candidate: Deepfake-Eval-2024, if access is granted) | real media of the same people | secondary unless large enough |
 
 - Identity-disjoint from all training and validation, checked by name and by the
@@ -328,10 +345,13 @@ Before the protocol freezes:
 5. Write the round 4 generation script for the celebrity swap tools and the fresh
    v4 seen-slice generators: pinned revisions, CPU offload, and resumable chunks
    so one job does not hold the shared queue for days.
-6. OpenFake selection: done. The metadata pass (`scripts/openfake_metadata.py`,
-   [`openfake_metadata.json`](openfake_metadata.json)) and the plan B selection
-   and download (`scripts/download_openfake_round4.py`) are written; the 320 px
-   download replaced the first one on xixi.
+6. Published data: done. The OpenFake metadata pass
+   (`scripts/openfake_metadata.py`, [`openfake_metadata.json`](openfake_metadata.json)),
+   the plan B training and `v4_photos_unseen` selections and downloads
+   (`scripts/download_openfake_round4.py`) and the SFHQ-T2I and FFHQ download
+   (`scripts/download_sfhq_t2i_round4.py`) are written and have run on xixi
+   (`data/raw/openfake_round4_det320`, `openfake_round4_test_det320`,
+   `sfhq_round4_det320`).
 7. Implement source format matching in the round 4 manifest build, from the
    recorded `jpeg_quality` and `subsampling`, and the source-format gap in the
    open-world comparison.
@@ -346,15 +366,18 @@ validation passes over the added domains. Offloaded generation is the slow part;
 it runs in resumable chunks so aida's jobs can interleave. A rented GPU becomes
 worth it only if a generator that matters is missing from published data.
 
-Downloads, all to xixi's data directory: the SFHQ-T2I archive (22.9 GB),
-OpenFake's test split (68 GB), and plan B's 366 GB of OpenFake train row groups
-with only face crops stored. Detection at full resolution held the first
+Downloads, all to xixi's data directory and all done on 2026-11-03, store face
+crops only: 10.6 GB of SFHQ-T2I members and 8.8 GB of FFHQ shards (11.3 GB
+kept), OpenFake's whole test split (68 GB streamed, 1.6 GB kept), and plan B's
+366 GB of OpenFake train row groups. Detection at full resolution held the first
 download to about 20 MB/s (about 6 hours, 16 GB of crops); at 320 px the second
 streamed at about 90 MB/s (about 1.1 hours) and stored 42.9 GB, 30 GB of it
 Pexels crops, because the large faces of 8 to 29 MP photos are now kept at
 source resolution. xixi had 7 GB free; removing round 2's generation models, a
-duplicate round 3 download cache, and an unrelated project's models freed 76 GB,
-and deleting the first download's crops leaves about 36 GB.
+duplicate round 3 download cache, and an unrelated project's models freed 76 GB.
+Deleting the first download's crops, that project's remaining files, a duplicate
+copy of fresh v2's FFHQ shards and the pip cache then left 29 GB free after all
+downloads.
 
 ## Out of scope for round 4
 
@@ -368,7 +391,11 @@ and deleting the first download's crops leaves about 36 GB.
 
 1. **Test sources:** can we get Deepfake-Eval-2024 (or another collected set of
    real-world celebrity deepfakes)? Which source supplies the real photos for
-   `v4_photos_seen`?
+   `v4_photos_seen`? OpenFake's test split has only 455 real faces, so
+   `v4_photos_unseen` is either balanced at about 455 per label (a 95% interval
+   of roughly ±0.03 on balanced accuracy, against ±0.02 at 1,000) or its reals
+   are topped up from the
+   same new source as `v4_photos_seen`.
 2. **Celeb-DF identity cut:** how many swap videos the split drops, and whether
    that is acceptable.
 3. **Success bar:** is 0.85 with a lower bound of 0.80 the right reading of

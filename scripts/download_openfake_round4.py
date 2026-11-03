@@ -7,6 +7,11 @@ order of a seeded hash of their image SHA-256, so the choice is deterministic an
 independent of row order. Every row in those row groups whose prompt names an LFW
 public figure is also kept, for the celebrity collection.
 
+``select-test`` picks fresh v4's unseen slice from OpenFake's core/test split, whose
+generators never enter training: up to ``TEST_FAKE_QUOTA`` person-prompt rows per
+photo generator and every ImageNet and DOCCI photo (``TEST_REAL_QUOTAS``), by a
+separate seed. ``download`` handles either selection.
+
 ``download`` streams the planned row groups, keeps only the selected rows, checks
 each image against its published SHA-256, and applies the inference face policy
 (``deepfake_detection.inference.face``: largest face with score at least 0.80 and
@@ -50,6 +55,7 @@ from pathlib import Path
 
 try:
     from scripts.openfake_metadata import (
+        EXCLUDED,
         OPENFAKE,
         RemoteFile,
         _load,
@@ -61,6 +67,7 @@ try:
     )
 except ModuleNotFoundError:  # run as ``python scripts/download_openfake_round4.py``
     from openfake_metadata import (
+        EXCLUDED,
         OPENFAKE,
         RemoteFile,
         _load,
@@ -72,6 +79,12 @@ except ModuleNotFoundError:  # run as ``python scripts/download_openfake_round4.
     )
 
 SEED = "round4-openfake-20261102"
+# Fresh v4's unseen slice: OpenFake core/test, whose generators never enter training.
+TEST_SEED = "round4-openfake-test-20261103"
+TEST_FAKE_QUOTA = 300  # person-prompt rows per test generator
+# Every real row: the person heuristic flags long DOCCI and ImageNet captions that
+# mention a hand or a statue, and only 3% of flagged rows had a face (2026-11-03).
+TEST_REAL_QUOTAS = {"imagenet": None, "docci": None}  # None keeps every row
 CROP_MARGIN = 2.5
 WHOLE_IMAGE_SHARE = 0.8
 MIN_FREE_BYTES = 10 * 10**9  # stop before the shared disk fills
@@ -85,15 +98,16 @@ IJG_LUMA = (16, 11, 10, 16, 24, 40, 51, 61, 12, 12, 14, 19, 26, 58, 60, 55,
 SUBSAMPLING = {0: "4:4:4", 1: "4:2:2", 2: "4:2:0"}
 
 
-def rank(image_sha256: str) -> str:
-    return hashlib.sha256(f"{SEED}\0{image_sha256}".encode()).hexdigest()
+def rank(image_sha256: str, seed: str = SEED) -> str:
+    return hashlib.sha256(f"{seed}\0{image_sha256}".encode()).hexdigest()
 
 
-def choose_rows(candidates, quotas: dict):
+def choose_rows(candidates, quotas: dict, seed: str = SEED):
     """Take each key's quota of rows in hash-rank order; a key without a quota keeps all."""
     import pandas as pd
 
-    ordered = candidates.assign(rank=candidates["image_sha256"].map(rank)).sort_values(
+    ordered = candidates.assign(
+        rank=candidates["image_sha256"].map(lambda value: rank(value, seed))).sort_values(
         ["rank", "file", "row_group", "position"])
     parts = [part.head(quotas.get(key, len(part)))
              for key, part in ordered.groupby("key", sort=True)]
@@ -221,6 +235,56 @@ def select(cache: Path, plan: str, output: Path) -> dict:
         "selected_rows": len(entries),
         "quota_rows": dict(sorted(counts.items())),
         "celebrity_rows": dict(sorted(celebrities.items())),
+        "selection_sha256": hashlib.sha256(selection.read_bytes()).hexdigest(),
+    }
+    (output / "selection.json").write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n",
+                                           encoding="utf-8")
+    return summary
+
+
+def test_rows(rows):
+    """Person-prompt core/test rows of photo generators, and every real, keyed by model."""
+    test = rows[rows["split"] == "core/test"]
+    real = test["label"] == "real"
+    keep = real | (test["person"] & ~test["model"].str.contains(EXCLUDED))
+    test = test[keep].copy()
+    test["key"] = list(zip(test["label"], test["model"], strict=True))
+    return test
+
+
+def select_test(cache: Path, output: Path) -> dict:
+    """Rows for fresh v4's unseen slice; the whole test split is streamed (68 GB)."""
+    paths = sorted(cache.glob("core__test-*.parquet"))
+    rows = _load(paths, ["label", "model", "image_sha256", "row_group", "person",
+                         "public_figures"])
+    rows["position"] = rows.groupby(["file", "row_group"], sort=False).cumcount()
+    candidates = test_rows(rows)
+    keys = set(candidates["key"])
+    quotas = {key: TEST_FAKE_QUOTA for key in keys if key[0] == "fake"}
+    quotas.update({("real", name): quota for name, quota in TEST_REAL_QUOTAS.items()
+                   if quota is not None})
+    unknown = {name for label, name in keys if label == "real"} - set(TEST_REAL_QUOTAS)
+    if unknown:
+        raise ValueError(f"real sources without a quota: {sorted(unknown)}")
+    chosen = choose_rows(candidates, quotas, TEST_SEED).drop_duplicates("image_sha256")
+    entries = sorted(({"file": row.file, "row_group": int(row.row_group),
+                       "position": int(row.position), "image_sha256": row.image_sha256,
+                       "label": row.label, "model": row.model, "group": row.key[1],
+                       "roles": "v4_photos_unseen", "public_figures": row.public_figures}
+                      for row in chosen.itertuples(index=False)),
+                     key=lambda e: (e["file"], e["row_group"], e["position"]))
+    output.mkdir(parents=True, exist_ok=True)
+    selection = output / "selection.csv"
+    with selection.open("w", newline="", encoding="utf-8") as stream:
+        writer = csv.DictWriter(stream, FIELDS, lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(entries)
+    summary = {
+        "source": {"repo": OPENFAKE[0], "revision": OPENFAKE[1], "split": "core/test"},
+        "seed": TEST_SEED, "fake_quota": TEST_FAKE_QUOTA, "real_quotas": TEST_REAL_QUOTAS,
+        "row_groups": len({(e["file"], e["row_group"]) for e in entries}),
+        "selected_rows": len(entries),
+        "rows": dict(sorted(Counter(f"{e['label']}/{e['group']}" for e in entries).items())),
         "selection_sha256": hashlib.sha256(selection.read_bytes()).hexdigest(),
     }
     (output / "selection.json").write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n",
@@ -369,23 +433,13 @@ def fetch_group(client, file: str, group: int, wanted: list[dict], output: Path)
             if "path" in record:
                 record["path"] = Path(record["path"]).relative_to(output).as_posix()
         records.append(record)
-    target = output / "rows" / f"{file.replace('/', '__')}__{group:03d}.jsonl"
-    partial = target.with_suffix(".partial")
-    partial.write_text("".join(json.dumps(r, sort_keys=True) + "\n" for r in records),
-                       encoding="utf-8")
-    partial.replace(target)
+    write_records(output, f"{file.replace('/', '__')}__{group:03d}", records)
     image_bytes = parquet.metadata.row_group(group).column(0).total_compressed_size
     return {"records": records, "streamed": image_bytes}
 
 
-def download(selection: Path, output: Path, workers: int, limit: int | None) -> dict:
-    import httpx
-
-    with selection.open(newline="", encoding="utf-8") as stream:
-        rows = list(csv.DictReader(stream))
-    groups: dict = defaultdict(list)
-    for row in rows:
-        groups[(row["file"], int(row["row_group"]))].append(row)
+def prepare_output(output: Path, selection: Path) -> set[str]:
+    """Check or write ``policy.json`` under ``output``; return the finished record files."""
     (output / "rows").mkdir(parents=True, exist_ok=True)
     policy = {"face_policy": face_policy(), "crop_margin": CROP_MARGIN,
               "whole_image_share": WHOLE_IMAGE_SHARE,
@@ -399,7 +453,27 @@ def download(selection: Path, output: Path, workers: int, limit: int | None) -> 
             raise RuntimeError(f"{output} has records but no {marker.name}; "
                                "use a new output directory")
         marker.write_text(json.dumps(policy, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    done = {path.name for path in (output / "rows").glob("*.jsonl")}
+    return {path.name for path in (output / "rows").glob("*.jsonl")}
+
+
+def write_records(output: Path, name: str, records: list[dict]) -> None:
+    """Write one unit's records at once, so a resumed download redoes partial units."""
+    target = output / "rows" / f"{name}.jsonl"
+    partial = target.with_suffix(".partial")
+    partial.write_text("".join(json.dumps(r, sort_keys=True) + "\n" for r in records),
+                       encoding="utf-8")
+    partial.replace(target)
+
+
+def download(selection: Path, output: Path, workers: int, limit: int | None) -> dict:
+    import httpx
+
+    with selection.open(newline="", encoding="utf-8") as stream:
+        rows = list(csv.DictReader(stream))
+    groups: dict = defaultdict(list)
+    for row in rows:
+        groups[(row["file"], int(row["row_group"]))].append(row)
+    done = prepare_output(output, selection)
     todo = [(file, group, wanted) for (file, group), wanted in sorted(groups.items())
             if f"{file.replace('/', '__')}__{group:03d}.jsonl" not in done]
     print(f"{len(groups) - len(todo)} of {len(groups)} row groups already done", flush=True)
@@ -451,6 +525,11 @@ def main() -> None:
                         help="the openfake metadata cache of scripts/openfake_metadata.py")
     choose.add_argument("--plan", default="B")
     choose.add_argument("--output", type=Path, default=Path("data/subsets/openfake_round4"))
+    choose_test = commands.add_parser("select-test",
+                                      help="fresh v4 unseen-slice rows from core/test")
+    choose_test.add_argument("--cache", type=Path, required=True)
+    choose_test.add_argument("--output", type=Path,
+                             default=Path("data/subsets/openfake_round4_test"))
     fetch = commands.add_parser("download")
     fetch.add_argument("--selection", type=Path,
                        default=Path("data/subsets/openfake_round4/selection.csv"))
@@ -464,6 +543,8 @@ def main() -> None:
     args = parser.parse_args()
     if args.command == "select":
         print(json.dumps(select(args.cache, args.plan, args.output), indent=2))
+    elif args.command == "select-test":
+        print(json.dumps(select_test(args.cache, args.output), indent=2))
     else:
         BUDGET.capacity = args.pixel_budget
         BUDGET.max_rss = int(args.max_rss_gb * 1e9)

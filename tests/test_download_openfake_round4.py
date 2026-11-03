@@ -112,3 +112,16 @@ def test_locate_face_detects_on_a_320_px_copy_and_measures_in_source_pixels() ->
     assert locate_face(np.zeros((200, 300, 3), dtype=np.uint8), detector)[1][
         "detection_scale"] == 1.0
     assert detector.seen == (200, 300, 3)  # already small enough: detected as is
+
+
+def test_test_rows_keep_photo_generators_and_reals_keyed_by_model() -> None:
+    from scripts.download_openfake_round4 import test_rows
+
+    rows = pd.DataFrame({
+        "split": ["core/test"] * 5 + ["core/train"],
+        "person": [True, True, False, False, True, True],
+        "label": ["fake", "fake", "real", "fake", "fake", "fake"],
+        "model": ["z-image-turbo", "sora-2", "docci", "gpt-image-2", "veo-3", "flux.1-dev"],
+    })
+    # reals need no person prompt; fakes need one and must be photo generators
+    assert test_rows(rows)["key"].tolist() == [("fake", "z-image-turbo"), ("real", "docci")]
