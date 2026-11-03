@@ -418,7 +418,11 @@ Before the protocol freezes:
    `openworld materialize --encodings` applies them before detection, and the
    fresh v4 catalog (`data/fresh_v4.py`) uses them. The training manifest build
    and the gap remain.
-8. Run the torch tests in CI, since most of the above is torch code.
+8. Run the torch tests in CI, since most of the above is torch code. Done: the
+   `torch` job in `.github/workflows/ci.yml` installs CPU torch 2.14.1 (the
+   training machine's release), OpenCV, httpx and ffmpeg and fails if any test
+   skips. Locally with the same versions: 183 passed, only the ffmpeg test
+   skipped (no ffmpeg on that machine). CI runs on pull requests and on `main`.
 
 ## Compute
 
