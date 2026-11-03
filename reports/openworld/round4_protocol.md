@@ -263,7 +263,7 @@ before identity grouping widens it.
 
 | Slice | Fakes | Reals | Role |
 |---|---|---|---|
-| `v4_photos_seen` | generated on xixi for this test, with our own prompt grammar and a fresh seed namespace, from training families that fit 8 GB with CPU offload (candidates: SDXL base, a photoreal SDXL fine-tune, SD 3.5 Medium) | real photos from a source no split uses | primary |
+| `v4_photos_seen` | generated on xixi for this test (`scripts/generate_round4.py`), with our own prompt grammar and a fresh seed namespace, from three training families that fit 8 GB with CPU offload: SDXL base 1.0, RealVisXL V5.0 and SD 3.5 Medium | faces from Unsplash Lite and Open Images, sources no split uses (see [Fresh v4 reals](#fresh-v4-reals)) | primary |
 | `v4_celebrity` | swaps and identity-preserving generations, with tools used in training, of celebrities absent from training and validation | real photos of the same celebrities | primary |
 | `v4_photos_unseen` | OpenFake `core` test split (68 GB, 13 shards), photo generators only: up to 300 person-prompt rows per generator (seed `round4-openfake-test-20261103`) from 16 generators, of which 1,840 have a face (Z-Image Turbo, FLUX.2 klein 9B, GPT Image 1.5 and 2, Midjourney 7, ERNIE-Image and Turbo, Recraft v2 and v3, Seedream 5, nano-banana-pro, Ideogram 2.0 and four anonymous arena models) | every ImageNet and DOCCI photo in the split was run through the face policy, and only 455 of 45,620 have a face (DOCCI 160, ImageNet 295); most show animals, objects or scenes, and the person heuristic flags captions that mention a hand or a statue | secondary: how fast the model goes stale |
 | `v4_celebrity_wild` | celebrity deepfakes collected online (candidate: Deepfake-Eval-2024, if access is granted) | real media of the same people | secondary unless large enough |
@@ -276,6 +276,53 @@ before identity grouping widens it.
 - Passes the leakage control above against all training and validation data.
 - A low-level shortcut probe runs per slice, as for fresh v2 and v3. A slice
   whose best single image statistic exceeds 0.70 is reported but not gated.
+
+### Fresh v4 reals
+
+Two downloads (2026-11-03), both through the training face policy (320 px
+detection, size limit in source pixels, lossless crops), stored on xixi and never
+redistributed:
+
+- **Unsplash Lite** (dataset 1.4.0, 25,000 photos; its terms allow storing the
+  photos and internal machine-learning use, not redistribution).
+  `scripts/download_unsplash_round4.py` keeps the 24,638 photos submitted before
+  2022-08-01, so none can come from a modern generator (seed
+  `round4-unsplash-20261103`), checks a 320 px preview of each for a face that
+  could pass the policy, and fetches only those at full resolution (the CDN
+  re-encodes them as JPEG, about quality 89, 4:2:0). The collection is mostly
+  landscapes and small figures: 510 photos have a usable face (2.1%, 2.6 GB).
+- **Open Images** (validation and test images, CC BY 2.0 Flickr photos with
+  human-verified boxes). `scripts/download_openimages_round4.py` keeps the 9,545
+  photos whose largest "Human face" box, neither a group box nor a depiction,
+  spans at least 6% of the frame on both sides, with no depicted face and no
+  rotation, ordered by seed `round4-openimages-20261103`. The first 16 of its 48
+  units (3,200 photos, from the 1024 px CVDF mirror) gave 2,567 faces (80%,
+  0.8 GB); the rest stay unused.
+
+Together that is 3,077 real faces, enough for `v4_photos_seen` (about 1,000) and
+for topping up `v4_photos_unseen` (see open question 1). Both slices report
+false-positive rates per real source.
+
+### Fresh v4 seen-slice fakes
+
+`scripts/generate_round4.py t2i` renders the same prompt and size for index `i`
+with every generator (seed `round4-v4-photos-seen-20261103`; the noise also
+depends on the generator), at each model card's settings from a pinned revision:
+
+| Generator | OpenFake train member | Revision | Settings |
+|---|---|---|---|
+| SDXL base 1.0 | `stable-diffusion-xl-base-1.0` | `46216598` | Euler, 40 steps, guidance 5, no refiner |
+| RealVisXL V5.0 | `sdxl-realvis-v5` | `ac93e0dd` | DPM++ 2M Karras, 50 steps, guidance 5, the card's negative prompt |
+| SD 3.5 Medium | `sd-3.5` | `b940f670` | 40 steps, guidance 4.5 (gated: needs a Hugging Face token with the license accepted) |
+
+The grammar (`round4-photo-v1`) is new, not round 2's: one adult (20s to 80s,
+two genders, ten origins) in ten shot types from close-up to documentary,
+twenty-five everyday scenes, ten lighting conditions and six camera
+descriptions, at 1 MP in five aspect buckets from 832 x 1216 to 1216 x 832. The
+longest prompt is 52 CLIP tokens. About 400 images per generator are planned,
+so about 1,000 faces remain after the face policy. Generated images are
+PNG; the format matching of the training data applies here too, with the reals as
+the reference, so the slice cannot be solved by source format.
 
 ## Development selection
 
@@ -344,14 +391,18 @@ Before the protocol freezes:
    so a successful model can ship.
 5. Write the round 4 generation script for the celebrity swap tools and the fresh
    v4 seen-slice generators: pinned revisions, CPU offload, and resumable chunks
-   so one job does not hold the shared queue for days.
+   so one job does not hold the shared queue for days. The seen-slice part is
+   written (`scripts/generate_round4.py t2i`, smoke-tested on xixi with tiny
+   pipelines); the celebrity tools wait for the identity source.
 6. Published data: done. The OpenFake metadata pass
    (`scripts/openfake_metadata.py`, [`openfake_metadata.json`](openfake_metadata.json)),
    the plan B training and `v4_photos_unseen` selections and downloads
-   (`scripts/download_openfake_round4.py`) and the SFHQ-T2I and FFHQ download
-   (`scripts/download_sfhq_t2i_round4.py`) are written and have run on xixi
-   (`data/raw/openfake_round4_det320`, `openfake_round4_test_det320`,
-   `sfhq_round4_det320`).
+   (`scripts/download_openfake_round4.py`), the SFHQ-T2I and FFHQ download
+   (`scripts/download_sfhq_t2i_round4.py`) and fresh v4's reals
+   (`scripts/download_unsplash_round4.py`, `scripts/download_openimages_round4.py`)
+   are written and have run on xixi (`data/raw/openfake_round4_det320`,
+   `openfake_round4_test_det320`, `sfhq_round4_det320`,
+   `unsplash_round4_det320`, `openimages_round4_det320`).
 7. Implement source format matching in the round 4 manifest build, from the
    recorded `jpeg_quality` and `subsampling`, and the source-format gap in the
    open-world comparison.
@@ -377,7 +428,14 @@ source resolution. xixi had 7 GB free; removing round 2's generation models, a
 duplicate round 3 download cache, and an unrelated project's models freed 76 GB.
 Deleting the first download's crops, that project's remaining files, a duplicate
 copy of fresh v2's FFHQ shards and the pip cache then left 29 GB free after all
-downloads.
+downloads, and 25 GB after fresh v4's reals.
+
+Generation needs the whole GPU: offloaded SDXL peaks near 7 GB. The three
+models take about 7, 7 and 16 GB of disk, so they are downloaded one at a time
+and deleted once their images are done. A run checks that 7 GB of GPU memory are
+free before loading a model and otherwise exits, because a process outside the
+queue (on 2026-11-03 an Ollama model of 6.2 GB with a 30 minute keep-alive) can
+hold the GPU.
 
 ## Out of scope for round 4
 
@@ -391,11 +449,12 @@ downloads.
 
 1. **Test sources:** can we get Deepfake-Eval-2024 (or another collected set of
    real-world celebrity deepfakes)? Which source supplies the real photos for
-   `v4_photos_seen`? OpenFake's test split has only 455 real faces, so
-   `v4_photos_unseen` is either balanced at about 455 per label (a 95% interval
-   of roughly ±0.03 on balanced accuracy, against ±0.02 at 1,000) or its reals
-   are topped up from the
-   same new source as `v4_photos_seen`.
+   `v4_photos_seen`? Proposed: Unsplash Lite and Open Images (see
+   [Fresh v4 reals](#fresh-v4-reals)). OpenFake's test split has only 455 real
+   faces, so `v4_photos_unseen` is either balanced at about 455 per label (a 95%
+   interval of roughly ±0.03 on balanced accuracy, against ±0.02 at 1,000) or its
+   reals are topped up with about 545 faces from the same pool as
+   `v4_photos_seen`, which then differs from its own ImageNet and DOCCI reals.
 2. **Celeb-DF identity cut:** how many swap videos the split drops, and whether
    that is acceptable.
 3. **Success bar:** is 0.85 with a lower bound of 0.80 the right reading of
