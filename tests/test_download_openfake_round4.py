@@ -58,3 +58,57 @@ def test_pixel_budget_holds_back_images_beyond_its_capacity() -> None:
     assert order == ["large in", "large out", "second in"]
     with budget.hold(250.0):  # larger than the whole budget: runs once nothing else holds it
         pass
+
+
+def test_source_encoding_recovers_libjpeg_quality_and_subsampling() -> None:
+    import io
+
+    from PIL import Image
+
+    from scripts.download_openfake_round4 import source_encoding
+
+    pixels = Image.radial_gradient("L").convert("RGB")
+    for quality, sampling, name in ((35, 2, "4:2:0"), (75, 2, "4:2:0"), (90, 0, "4:4:4"),
+                                    (95, 1, "4:2:2")):
+        buffer = io.BytesIO()
+        pixels.save(buffer, "JPEG", quality=quality, subsampling=sampling)
+        with Image.open(buffer) as image:
+            assert source_encoding(image) == {"jpeg_quality": quality, "subsampling": name}
+    buffer = io.BytesIO()
+    pixels.save(buffer, "PNG")
+    with Image.open(buffer) as image:
+        assert source_encoding(image) == {}
+
+
+class _Detector:
+    def __init__(self, faces: list) -> None:
+        self.faces, self.seen = faces, None
+
+    def detect(self, rgb):
+        self.seen = rgb.shape
+        return self.faces
+
+
+def test_locate_face_detects_on_a_320_px_copy_and_measures_in_source_pixels() -> None:
+    import numpy as np
+
+    from deepfake_detection.inference.face import Face
+    from scripts.download_openfake_round4 import locate_face
+
+    rgb = np.zeros((1000, 800, 3), dtype=np.uint8)  # detected at scale 0.32
+    points = np.full((5, 2), 16.0)
+    detector = _Detector([Face((32.0, 16.0, 32.0, 24.0), 0.9, points)])
+    status, info = locate_face(rgb, detector)
+    assert detector.seen == (320, 256, 3)
+    assert status == "found"
+    assert info["face_box"] == [100.0, 50.0, 100.0, 75.0]
+    assert info["landmarks"][0] == [50.0, 50.0]
+    small = Face((0.0, 0.0, 16.0, 16.0), 0.9, points)  # 50 px in the source: too small
+    assert locate_face(rgb, _Detector([small]))[0] == "face_too_small"
+    status, info = locate_face(rgb, _Detector([Face((0.0, 0.0, 40.0, 40.0), 0.6, points)]))
+    assert (status, info["best_score"]) == ("low_confidence", 0.6)
+    assert locate_face(rgb, _Detector([]))[0] == "no_face"
+    detector = _Detector([])
+    assert locate_face(np.zeros((200, 300, 3), dtype=np.uint8), detector)[1][
+        "detection_scale"] == 1.0
+    assert detector.seen == (200, 300, 3)  # already small enough: detected as is

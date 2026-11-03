@@ -10,11 +10,18 @@ public figure is also kept, for the celebrity collection.
 ``download`` streams the planned row groups, keeps only the selected rows, checks
 each image against its published SHA-256, and applies the inference face policy
 (``deepfake_detection.inference.face``: largest face with score at least 0.80 and
-short side at least 64 px). A passing image is stored as a lossless PNG crop at
-source resolution, a square ``CROP_MARGIN`` times the face box, or as its original
-bytes when that square would cover most of the image. Canonicalization (alignment,
-scale matching, JPEG 90) happens later, from these files. Each row group's
-records are written once it finishes, so an interrupted download resumes.
+short side at least 64 px) the way ``deepfake_detection.data.openworld`` does:
+faces are detected on a copy whose long side is ``DETECTION_SIDE`` (320 px), where
+YuNet finds faces that fill a large frame, and the size limit is applied in source
+pixels. (The first round 4 download detected at full resolution and kept about half
+as many Pexels photos.) A passing image is stored as a lossless PNG crop at source
+resolution, a square ``CROP_MARGIN`` times the face box, or as its original bytes
+when that square would cover most of the image. Each record also keeps the
+source's JPEG quality and chroma subsampling, so PNG sources can later be encoded
+to match the JPEG ones. Canonicalization (alignment, scale matching, JPEG 90)
+happens later, from these files. Each row group's records are written once it
+finishes, so an interrupted download resumes; ``policy.json`` stops a resume into
+an output written under another face policy.
 
 Run from the repository root with ``PYTHONPATH=.genlibs:src``. Many threads that
 allocate and free multi-megabyte buffers otherwise make glibc and Arrow keep freed
@@ -70,6 +77,12 @@ WHOLE_IMAGE_SHARE = 0.8
 MIN_FREE_BYTES = 10 * 10**9  # stop before the shared disk fills
 FIELDS = ("file", "row_group", "position", "image_sha256", "label", "model", "group", "roles",
           "public_figures")
+# IJG (libjpeg) luminance quantization table at quality 50, row-major.
+IJG_LUMA = (16, 11, 10, 16, 24, 40, 51, 61, 12, 12, 14, 19, 26, 58, 60, 55,
+            14, 13, 16, 24, 40, 57, 69, 56, 14, 17, 22, 29, 51, 87, 80, 62,
+            18, 22, 37, 56, 68, 109, 103, 77, 24, 35, 55, 64, 81, 104, 113, 92,
+            49, 64, 78, 87, 103, 121, 120, 101, 72, 92, 95, 98, 112, 100, 103, 99)
+SUBSAMPLING = {0: "4:4:4", 1: "4:2:2", 2: "4:2:0"}
 
 
 def rank(image_sha256: str) -> str:
@@ -94,6 +107,73 @@ def crop_box(face_box, width: int, height: int, margin: float = CROP_MARGIN) -> 
     cx, cy = x + w / 2, y + h / 2
     return (max(0, math.floor(cx - half)), max(0, math.floor(cy - half)),
             min(width, math.ceil(cx + half)), min(height, math.ceil(cy + half)))
+
+
+def jpeg_quality(luma_table) -> int:
+    """The IJG quality whose luminance table has the closest sum (order does not matter).
+
+    Exact for files written by libjpeg (Pillow, most software); for camera or
+    editor tables it is the IJG quality of the same overall coarseness.
+    """
+    def total(quality: int) -> int:
+        scale = 5000 // quality if quality < 50 else 200 - 2 * quality
+        return sum(min(255, max(1, (value * scale + 50) // 100)) for value in IJG_LUMA)
+
+    target = sum(luma_table)
+    return min(range(1, 101), key=lambda quality: abs(total(quality) - target))
+
+
+def source_encoding(image) -> dict:
+    """JPEG quality and chroma subsampling of a JPEG source; nothing for other formats."""
+    from PIL import JpegImagePlugin
+
+    tables = getattr(image, "quantization", None)
+    if image.format not in {"JPEG", "MPO"} or not tables:
+        return {}
+    sampling = JpegImagePlugin.get_sampling(image)
+    return {"jpeg_quality": jpeg_quality(tables[0]),
+            "subsampling": SUBSAMPLING.get(sampling, "other")}
+
+
+def face_policy() -> str:
+    from deepfake_detection.data.openworld import DETECTION_SIDE
+    from deepfake_detection.inference.face import DETECTOR_ID, POLICY_ID
+
+    return f"{DETECTOR_ID}-det{DETECTION_SIDE}-origsize-{POLICY_ID}"
+
+
+def locate_face(rgb, detector) -> tuple[str, dict]:
+    """The inference face policy on a ``DETECTION_SIDE`` copy, measured in source pixels.
+
+    Returns ``found`` or the rejection reason, with the chosen face's box and
+    landmarks (or the best score when no face is confident enough).
+    """
+    import numpy as np
+
+    from deepfake_detection.data.openworld import DETECTION_SIDE
+    from deepfake_detection.inference.face import MIN_SCORE, MIN_SHORT_SIDE
+
+    height, width = rgb.shape[:2]
+    scale = min(1.0, DETECTION_SIDE / max(width, height))
+    if scale < 1.0:
+        import cv2
+
+        size = (round(width * scale), round(height * scale))
+        rgb = cv2.resize(rgb, size, interpolation=cv2.INTER_AREA)
+    faces = detector.detect(rgb)
+    info = {"faces_detected": len(faces), "detection_scale": round(scale, 6)}
+    if not faces:
+        return "no_face", info
+    confident = [face for face in faces if face.score >= MIN_SCORE]
+    if not confident:
+        return "low_confidence", {**info, "best_score": round(max(f.score for f in faces), 4)}
+    face = confident[0]
+    box = [value / scale for value in face.box]
+    info.update(face_box=[round(v, 2) for v in box], score=round(face.score, 4),
+                landmarks=np.round(face.landmarks / scale, 2).tolist())
+    if min(box[2], box[3]) < MIN_SHORT_SIDE:
+        return "face_too_small", info
+    return "found", info
 
 
 def select(cache: Path, plan: str, output: Path) -> dict:
@@ -187,13 +267,12 @@ def _release_memory() -> None:
 
 
 class PixelBudget:
-    """Bounds the megapixels being decoded and searched for faces at the same time.
+    """Bounds the megapixels being decoded and cropped at the same time.
 
-    YuNet at full resolution needs about 76 MB per megapixel (3.4 GB for a 45 MP
-    image, measured on xixi), so concurrent large images, not the number of
-    workers, set peak memory. An image larger than the whole budget runs alone.
-    A new image also waits while the process holds more than ``max_rss`` bytes,
-    releasing freed memory to the operating system meanwhile.
+    Decoded images (up to 45 MP in OpenFake), not the number of workers, set peak
+    memory, so concurrent large images wait. An image larger than the whole
+    budget runs alone. A new image also waits while the process holds more than
+    ``max_rss`` bytes, releasing freed memory to the operating system meanwhile.
     """
 
     def __init__(self, megapixels: float, max_rss: int = 16 * 10**9) -> None:
@@ -222,7 +301,6 @@ class PixelBudget:
 
 
 BUDGET = PixelBudget(120.0)
-SHRINK_ABOVE_PIXELS = 4_000_000
 
 
 def store_face(data: bytes, directory: Path, name: str) -> dict:
@@ -233,40 +311,25 @@ def store_face(data: bytes, directory: Path, name: str) -> dict:
     try:
         image = Image.open(io.BytesIO(data))  # reads the header only
         image_format, (width, height) = image.format, image.size
+        record = {"width": width, "height": height, "format": image_format,
+                  **source_encoding(image)}
     except Exception as error:  # any undecodable payload is recorded, not raised
         return {"status": "decode_error", "error": type(error).__name__}
     with BUDGET.hold(width * height / 1e6):
         try:
             image = image.convert("RGB")
         except Exception as error:  # any undecodable payload is recorded, not raised
-            return {"status": "decode_error", "error": type(error).__name__}
-        record = {"width": width, "height": height, "format": image_format}
-        faces = _detector().detect(np.asarray(image))
-        if width * height > SHRINK_ABOVE_PIXELS:
-            # YuNet keeps buffers sized for its last input (2.4 GB after a 45 MP image)
-            # until its next call; shrink them while this image still holds the budget.
-            _detector().detect(np.zeros((32, 32, 3), dtype=np.uint8))
-        return _store(image, data, faces, record, directory, name)
+            return {**record, "status": "decode_error", "error": type(error).__name__}
+        status, found = locate_face(np.asarray(image), _detector())
+        record.update(found)
+        if status != "found":
+            return {**record, "status": status}
+        return _store(image, data, record, directory, name)
 
 
-def _store(image, data: bytes, faces: list, record: dict, directory: Path, name: str) -> dict:
-    import numpy as np
-
-    from deepfake_detection.inference.face import MIN_SCORE, MIN_SHORT_SIDE
-
+def _store(image, data: bytes, record: dict, directory: Path, name: str) -> dict:
     width, height, image_format = record["width"], record["height"], record["format"]
-    confident = [face for face in faces if face.score >= MIN_SCORE]
-    record["faces_detected"] = len(faces)
-    if not faces:
-        return {**record, "status": "no_face"}
-    if not confident:
-        return {**record, "status": "low_confidence"}
-    face = confident[0]
-    record.update(face_box=[round(v, 2) for v in face.box], score=round(face.score, 4),
-                  landmarks=np.round(face.landmarks, 2).tolist())
-    if face.short_side < MIN_SHORT_SIDE:
-        return {**record, "status": "face_too_small"}
-    box = crop_box(face.box, width, height)
+    box = crop_box(record["face_box"], width, height)
     directory.mkdir(parents=True, exist_ok=True)
     if (box[2] - box[0]) * (box[3] - box[1]) >= WHOLE_IMAGE_SHARE * width * height:
         path = directory / f"{name}.{(image_format or 'bin').lower()}"
@@ -324,6 +387,18 @@ def download(selection: Path, output: Path, workers: int, limit: int | None) -> 
     for row in rows:
         groups[(row["file"], int(row["row_group"]))].append(row)
     (output / "rows").mkdir(parents=True, exist_ok=True)
+    policy = {"face_policy": face_policy(), "crop_margin": CROP_MARGIN,
+              "whole_image_share": WHOLE_IMAGE_SHARE,
+              "selection_sha256": hashlib.sha256(selection.read_bytes()).hexdigest()}
+    marker = output / "policy.json"
+    if marker.exists() and json.loads(marker.read_text(encoding="utf-8")) != policy:
+        raise RuntimeError(f"{output} was written under another policy or selection "
+                           f"({marker}); use a new output directory")
+    if not marker.exists():
+        if any((output / "rows").iterdir()):
+            raise RuntimeError(f"{output} has records but no {marker.name}; "
+                               "use a new output directory")
+        marker.write_text(json.dumps(policy, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     done = {path.name for path in (output / "rows").glob("*.jsonl")}
     todo = [(file, group, wanted) for (file, group), wanted in sorted(groups.items())
             if f"{file.replace('/', '__')}__{group:03d}.jsonl" not in done]
@@ -359,7 +434,9 @@ def summarize_download(output: Path) -> dict:
             record = json.loads(line)
             by_key[f"{record['label']}/{record['group']}"][record["status"]] += 1
             stored_bytes += record.get("bytes", 0)
-    summary = {"stored_gb": round(stored_bytes / 1e9, 2),
+    marker = output / "policy.json"
+    policy = json.loads(marker.read_text(encoding="utf-8")) if marker.exists() else {}
+    summary = {**policy, "stored_gb": round(stored_bytes / 1e9, 2),
                "by_key": {key: dict(counts) for key, counts in sorted(by_key.items())}}
     (output / "summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n",
                                          encoding="utf-8")
@@ -377,10 +454,10 @@ def main() -> None:
     fetch = commands.add_parser("download")
     fetch.add_argument("--selection", type=Path,
                        default=Path("data/subsets/openfake_round4/selection.csv"))
-    fetch.add_argument("--output", type=Path, default=Path("data/raw/openfake_round4"))
+    fetch.add_argument("--output", type=Path, default=Path("data/raw/openfake_round4_det320"))
     fetch.add_argument("--workers", type=int, default=12)
     fetch.add_argument("--pixel-budget", type=float, default=BUDGET.capacity,
-                       help="megapixels decoded and searched for faces at once")
+                       help="megapixels decoded and cropped at once")
     fetch.add_argument("--max-rss-gb", type=float, default=BUDGET.max_rss / 1e9,
                        help="admit no new image while the process holds more memory")
     fetch.add_argument("--limit-groups", type=int, help="fetch only this many row groups")

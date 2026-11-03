@@ -159,18 +159,58 @@ along, and the 3,469 fake and 3,110 real public-figure rows in the same row
 groups. Duplicate images are kept once, so a few quotas end 1 to 31 rows short.
 
 xixi cannot hold the original images (about 135 GB). `download` therefore applies
-the inference face policy while streaming and stores each passing image as a
-lossless PNG crop at source resolution: a square 2.5 times the face box, or the
-original file when that square would cover 80% of the image. The record keeps
-the source size, crop box, face box, landmarks, and score, so canonicalization
-can work from the crops. Every image is checked against OpenFake's SHA-256. In
-the first row groups, about 63% of fakes and 46% of reals passed the face policy,
-at about 420 KB per stored image; a 3,000-row quota then gives about 1,900 faces
-and a 2,000-row quota about 1,260.
+the inference face policy while streaming, detecting on a 320 px copy with the
+size limit in source pixels exactly as `data/openworld.py` does, and stores each
+passing image as a lossless PNG crop at source resolution: a square 2.5 times
+the face box, or the original file when that square would cover 80% of the
+image. The record keeps the source size, format, JPEG quality and chroma
+subsampling, crop box, face box, landmarks, and score, so canonicalization and
+format matching can work from the crops. Every image is checked against
+OpenFake's SHA-256.
+
+The first download (2026-11-02) detected at full resolution, where YuNet misses
+faces that fill a large frame. It kept 64% of fakes but only 38% of reals, and
+Pexels photos (8 to 29 MP) lost 48% to low confidence. Re-detecting a random
+30 row groups at 320 px left fakes at 70% kept but raised Pexels from 29% to 53%,
+and 31% of the Pexels crops it had kept were centered on a different face than
+the canonical policy picks. Its crops were therefore replaced by a second
+download at 320 px (2026-11-03, `data/raw/openfake_round4_det320`, `policy.json`
+records the policy). It stored 43,575 faces (42.9 GB): 28,475 fakes (64% of
+requested, as before) and 15,100 reals (46%, up from 38%), of which Pexels rose
+from 4,565 to 7,449. Thin families stay thin: Midjourney 822 of 3,000 (stylized
+images without a face), SD 2.1 1,300 of 3,591, Kolors 67, nano-banana 59 and
+Seedream 155. 2,744 fake and 1,816 real public-figure rows have faces.
+
+A face size check found no size shortcut after canonicalization. Before it,
+LAION reals have small faces (median eye distance 47 px), Pexels reals large
+ones (221 px) and fakes sit between (48 to 132 px by family), so eye distance
+alone separates the labels at a cross-validated AUROC of 0.70. After scale
+matching the face resolution separates them at only 0.54. Source format does
+separate them (next list).
+
 - Every collection is canonicalized as before: YuNet detection, minimum face size
   in source pixels, ArcFace alignment, collection-wise scale matching, JPEG 90.
   Rounds 2 and 3 showed that a fake source without matched reals teaches the
   model the source instead of the manipulation.
+- **Source format matching (new).** 54% of the stored OpenFake fakes come from
+  PNG or WebP files and 98.8% of the reals from JPEG files, so source format
+  alone separates them at a cross-validated AUROC of 0.76 (0.82 with detector
+  score and face resolution). Canonical JPEG 90 does not remove a source's
+  earlier JPEG compression, and detectors trained on such data are known to learn
+  "JPEG artifacts mean real". Before canonicalization, every training image whose
+  source is not a JPEG is therefore JPEG-encoded once, with a quality and chroma
+  subsampling pair drawn by a seeded hash of its SHA-256. JPEG sources are not
+  re-encoded.
+  - The JPEG sources themselves differ in quality: LAION is mostly quality 75
+    and Pexels 95, while fake families are each fixed at 75 (DALL-E 3, FLUX.1,
+    Grok, Midjourney), 90 or 95 (FLUX.2, Playground, Qwen, SD 1.x). Quality alone
+    separates JPEG fakes from JPEG reals at 0.62.
+  - A fake therefore draws from the complement: the collection's real
+    distribution of (quality, subsampling) pairs, scaled to the number of fakes,
+    minus the pairs its JPEG fakes already have (clipped at zero). All fakes
+    together then match the reals. A non-JPEG real draws from the real
+    distribution. Simulated on these crops, the pairs then separate the labels
+    at 0.517 (0.542 when fakes draw from the real distribution instead).
 
 ### Leakage control
 
@@ -242,6 +282,12 @@ advances, provided that, against E9 on the same split:
 
 If neither candidate qualifies, fresh v4 stays unscored.
 
+Reported for every candidate, not gated: the **source-format gap**, the AUROC of
+fakes from PNG sources minus that of fakes from JPEG sources, each against the
+same reals, on `openfake` validation. A gap above 0.05 means the model reads the
+source format rather than the generator, and is investigated before fresh v4 is
+scored.
+
 ## Threshold
 
 Locked on validation before fresh v4 is scored: the threshold that maximizes
@@ -263,7 +309,8 @@ once.
   exceeds a 10% false-positive rate.
 - **Also reported:** the secondary slices; AUROC on every slice with a paired
   bootstrap against E9; AP with the fake share; per-generator and per-tool
-  results; false-positive rates per real source; calibration.
+  results; false-positive rates per real source; calibration; the source-format
+  gap on `v4_photos_unseen`.
 
 ## Prerequisites
 
@@ -283,9 +330,12 @@ Before the protocol freezes:
    so one job does not hold the shared queue for days.
 6. OpenFake selection: done. The metadata pass (`scripts/openfake_metadata.py`,
    [`openfake_metadata.json`](openfake_metadata.json)) and the plan B selection
-   and download (`scripts/download_openfake_round4.py`) are written; the download
-   is running on xixi.
-7. Run the torch tests in CI, since most of the above is torch code.
+   and download (`scripts/download_openfake_round4.py`) are written; the 320 px
+   download replaced the first one on xixi.
+7. Implement source format matching in the round 4 manifest build, from the
+   recorded `jpeg_quality` and `subsampling`, and the source-format gap in the
+   open-world comparison.
+8. Run the torch tests in CI, since most of the above is torch code.
 
 ## Compute
 
@@ -297,10 +347,14 @@ it runs in resumable chunks so aida's jobs can interleave. A rented GPU becomes
 worth it only if a generator that matters is missing from published data.
 
 Downloads, all to xixi's data directory: the SFHQ-T2I archive (22.9 GB),
-OpenFake's test split (68 GB), and plan B's 366 GB of OpenFake train row groups,
-streamed at about 17 MB/s (about 6 hours) with only face crops stored (about 15
-to 30 GB). xixi had 7 GB free; removing round 2's generation models, a duplicate
-round 3 download cache, and an unrelated project's models freed 76 GB.
+OpenFake's test split (68 GB), and plan B's 366 GB of OpenFake train row groups
+with only face crops stored. Detection at full resolution held the first
+download to about 20 MB/s (about 6 hours, 16 GB of crops); at 320 px the second
+streamed at about 90 MB/s (about 1.1 hours) and stored 42.9 GB, 30 GB of it
+Pexels crops, because the large faces of 8 to 29 MP photos are now kept at
+source resolution. xixi had 7 GB free; removing round 2's generation models, a
+duplicate round 3 download cache, and an unrelated project's models freed 76 GB,
+and deleting the first download's crops leaves about 36 GB.
 
 ## Out of scope for round 4
 
