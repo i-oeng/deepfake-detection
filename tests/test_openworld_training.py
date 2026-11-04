@@ -102,6 +102,46 @@ def test_sampling_plan_balances_real_sources_only_when_configured():
         sampling_plan(_namespaced_rows(), {"real_balance": "source_domain"})
 
 
+def _rows_with_additions():
+    rows = [{**row, "source_domain": "ff"} for row in _namespaced_rows()]
+    for method in ("p", "q", "r"):
+        rows += [{"label": "FAKE", "fake_method": method, "video_id": f"{method}{index}",
+                  "lineage_video_ids": f"{method}:{index}", "source_domain": "photos"}
+                 for index in range(2)]
+    for source in ("laion", "ffhq"):
+        rows += [{"label": "REAL", "fake_method": "", "video_id": f"{source}{index}",
+                  "lineage_video_ids": f"{source}:{index}", "source_domain": "photos"}
+                 for index in range(4)]
+    return rows
+
+
+def test_addition_share_keeps_the_base_mix_and_fixes_the_additions_share():
+    config = {"sbi_share": 0.3, "real_balance": "lineage_namespace"}
+    _, _, base = sampling_plan(_namespaced_rows(), config)
+    _, weights, mass = sampling_plan(_rows_with_additions(),
+                                     {**config, "addition_share": 0.25,
+                                      "addition_domains": ["photos"]})
+    assert sum(weights) == pytest.approx(1.0)
+    for key, value in base.items():
+        assert mass[key] == pytest.approx(0.75 * value)
+    assert mass["real/laion"] == pytest.approx(mass["real/ffhq"]) == pytest.approx(0.0625)
+    assert mass["fake/p"] == pytest.approx(0.25 * 0.5 * 0.7 / 3)
+    with pytest.raises(ValueError, match="addition_share"):
+        sampling_plan(_rows_with_additions(), {**config, "addition_share": 0.25})
+    with pytest.raises(ValueError, match="addition_share"):
+        sampling_plan(_rows_with_additions(),
+                      {**config, "addition_share": 1.0, "addition_domains": ["photos"]})
+
+
+def test_excluded_real_namespaces_lose_their_reals_and_self_blends():
+    config = {"sbi_share": 0.3, "real_balance": "lineage_namespace",
+              "exclude_real_namespaces": ["ffhq"]}
+    rows, _, mass = sampling_plan(_rows_with_additions(), config)
+    assert not any(key.endswith("/ffhq") for key in mass)
+    assert sum(row["label"] == "FAKE" and not row.get("_sbi") for row in rows) == 8
+    assert mass["real/laion"] == pytest.approx(mass["real/ff"])
+
+
 def test_open_world_report_lists_real_only_domains_without_scoring_them():
     records = []
     for domain, labels in (("openfake", (0, 1)), ("lfw", (0,))):

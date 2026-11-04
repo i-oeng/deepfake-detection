@@ -289,8 +289,7 @@ def balance_namespaces(rows: list[dict[str, str]], weights: list[float], select)
     return balanced
 
 
-def sampling_plan(rows: list[dict[str, str]], config: dict) -> tuple[list, list[float], dict]:
-    """Training rows with self-blends, their sampling weights, and the mass per source."""
+def _group_plan(rows: list[dict[str, str]], config: dict) -> tuple[list, list[float]]:
     rows, weights = with_pseudo_fakes(rows, float(config.get("sbi_share", 0.0)))
     balance = config.get("real_balance")
     if balance == "lineage_namespace":
@@ -299,6 +298,40 @@ def sampling_plan(rows: list[dict[str, str]], config: dict) -> tuple[list, list[
         weights = balance_namespaces(rows, weights, lambda row: bool(row.get("_sbi")))
     elif balance is not None:
         raise ValueError(f"unknown real_balance: {balance}")
+    return rows, weights
+
+
+def sampling_plan(rows: list[dict[str, str]], config: dict) -> tuple[list, list[float], dict]:
+    """Training rows with self-blends, their sampling weights, and the mass per source.
+
+    ``exclude_real_namespaces`` drops the real rows (and so their self-blends) of the
+    named lineage namespaces. ``addition_share`` gives the rows of
+    ``addition_domains`` that fixed share of the sampling mass: each part is sampled
+    by the same recipe on its own, so the rest keeps its relative weights however
+    many methods and sources the additions bring.
+    """
+    excluded = set(config.get("exclude_real_namespaces") or ())
+    if excluded:
+        rows = [row for row in rows
+                if row["label"] != "REAL" or lineage_namespace(row) not in excluded]
+    share = config.get("addition_share")
+    if share is None:
+        rows, weights = _group_plan(rows, config)
+    else:
+        share = float(share)
+        domains = set(config.get("addition_domains") or ())
+        if not 0.0 < share < 1.0:
+            raise ValueError("addition_share must be in (0, 1)")
+        added = [row for row in rows if row.get("source_domain") in domains]
+        base = [row for row in rows if row.get("source_domain") not in domains]
+        if not added or not base:
+            raise ValueError("addition_share needs rows inside and outside addition_domains")
+        rows, weights = [], []
+        for group, group_share in ((base, 1.0 - share), (added, share)):
+            group_rows, group_weights = _group_plan(group, config)
+            group_total = sum(group_weights)
+            rows += group_rows
+            weights += [weight * group_share / group_total for weight in group_weights]
     total = sum(weights)
     mass: dict[str, float] = defaultdict(float)
     for row, weight in zip(rows, weights, strict=True):

@@ -1,16 +1,23 @@
 #!/usr/bin/env bash
-# Round 4 photo development run on xixi: train E10-photos (E9's recipe on the round 4
-# photo manifest, scripts/rebuild-round4) on three seeds, score each on the retired
-# fresh v2 and v3 sets, and compare with E9 (scripts/compare_round4_photos.py).
-# Fresh v4 stays unscored. Resumable seed by seed. Needs the whole GPU: stop the
-# resell bot's Ollama first.
+# Round 4 photo development run on xixi: train a candidate (by default E10-photos,
+# E9's recipe on the round 4 photo manifest from scripts/rebuild-round4) on three
+# seeds, score each on the retired fresh v2 and v3 sets, and compare with E9
+# (scripts/compare_round4_photos.py). Fresh v4 stays unscored. Resumable seed by seed.
+# Needs the whole GPU: stop the resell bot's Ollama first.
+#
+#   scripts/run-round4-photos [NAME CONFIG]
+#
+# NAME names the logs, scores and report: e10_photos writes
+# reports/openworld/round4_photos_comparison.*, e10_share round4_share_comparison.*.
 set -euo pipefail
 umask 0007
 project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$project_root"
 export PYTHONPATH="$project_root/src"
 python="${PYTHON:-$HOME/deepfake-detection/.venv/bin/python}"
-config=configs/training/openworld/e10_photos_l14_round4.yaml
+name="${1:-e10_photos}"
+config="${2:-configs/training/openworld/e10_photos_l14_round4.yaml}"
+report="reports/openworld/round4_${name#e10_}_comparison"
 fresh_v2=configs/evaluation/openworld_fresh_v2.yaml
 fresh_v3=configs/evaluation/openworld_fresh_v3.yaml
 art=artifacts/openworld
@@ -45,9 +52,9 @@ score() {  # run_dir output evaluation_config
 args=()
 for index in 0 1 2; do
   seed="${seeds[$index]}"
-  result="$runtime/e10_photos-$seed.json"
+  result="$runtime/$name-$seed.json"
   if [[ ! -f "$result" ]]; then
-    log="$runtime/e10_photos-$seed.log"
+    log="$runtime/$name-$seed.log"
     # Run as a module: Python 3.14 DataLoader workers re-import __main__.
     "$python" -m deepfake_detection.train.openworld train --config "$config" --seed "$seed" \
       | tee "$log"
@@ -61,14 +68,13 @@ Path(os.environ["RESULT"]).write_text(json.dumps(result, indent=2, sort_keys=Tru
   fi
   run_dir="$(RESULT="$result" "$python" -c \
     'import json,os; print(json.load(open(os.environ["RESULT"]))["run_dir"])')"
-  score "$run_dir" "$art/fresh-v2/e10_photos-$seed" "$fresh_v2"
-  score "$run_dir" "$art/fresh-v3/e10_photos-$seed" "$fresh_v3"
+  score "$run_dir" "$art/fresh-v2/$name-$seed" "$fresh_v2"
+  score "$run_dir" "$art/fresh-v3/$name-$seed" "$fresh_v3"
   args+=(--run "e9=${e9_runs[$index]}" --fresh-v2 "e9=$art/fresh-v2/e9-$seed/test.jsonl"
          --fresh-v3 "e9=$art/fresh-v3/e9-$seed/test.jsonl"
-         --run "e10_photos=$run_dir"
-         --fresh-v2 "e10_photos=$art/fresh-v2/e10_photos-$seed/test.jsonl"
-         --fresh-v3 "e10_photos=$art/fresh-v3/e10_photos-$seed/test.jsonl")
+         --run "$name=$run_dir"
+         --fresh-v2 "$name=$art/fresh-v2/$name-$seed/test.jsonl"
+         --fresh-v3 "$name=$art/fresh-v3/$name-$seed/test.jsonl")
 done
-"$python" scripts/compare_round4_photos.py "${args[@]}" \
-  --output reports/openworld/round4_photos_comparison.json \
-  --markdown reports/openworld/round4_photos_comparison.md
+"$python" scripts/compare_round4_photos.py "${args[@]}" --candidate "$name" \
+  --output "$report.json" --markdown "$report.md"
