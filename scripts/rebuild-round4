@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# Build the round 4 training manifest (AI-generated photos, part B of
+# reports/openworld/round4_protocol.md): catalog the OpenFake and SFHQ faces with
+# format matching, materialize them, add them to round 3's unchanged catalog, prune
+# every addition that repeats a validation, test or fresh test image, rebuild, audit,
+# and pin the E9 recipe to the result as E10-photos. Fresh v4 must already be built
+# (scripts/rebuild-fresh-v4). Each step writes runtime/round4_<n>_<step>.json.
+set -euo pipefail
+umask 0007
+project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$project_root"
+export PYTHONPATH="$project_root/src"
+python="${PYTHON:-$HOME/deepfake-detection/.venv/bin/python}"
+workers="${WORKERS:-8}"
+subset=data/subsets/df40/df40_openworld_round4
+base_catalog=data/subsets/df40/df40_openworld_round3/catalog.csv
+base_catalog_sha256=f4c50577e0f231b26df9061c04effbbcda3a700d6e0b9eaa8f2e95ecc3eb1c9a
+base_manifest=data/manifests/df40_openworld_round3/e4dd0240af9df4c60b0c
+data_root=data/raw/df40_openworld
+references=(
+  --reference data/manifests/openworld_fresh_v2/b209f9bcef05d95af5c1 data/raw/fresh_v2_images
+  --reference data/manifests/openworld_fresh_v3/f8fb7343da06e7a81dd7 data/raw/fresh_v3_images
+  --reference data/manifests/openworld_fresh_v4/c4cdc65a70672c3d1ad2 data/raw/fresh_v4_images
+)
+mkdir -p "$subset" runtime
+# Round 3's training data stays as it was: refuse any other base catalog.
+echo "$base_catalog_sha256  $base_catalog" | sha256sum --check --quiet
+
+"$python" -m deepfake_detection.data.round4 catalog --downloads-root data/raw \
+  --output "$subset/additions_selected.csv" --encodings "$subset/encodings.csv" \
+  > runtime/round4_1_catalog.json
+"$python" -m deepfake_detection.data.openworld materialize \
+  --catalog "$subset/additions_selected.csv" --downloads-root data/raw \
+  --data-root "$data_root" --output "$subset/additions_materialized.csv" \
+  --workers "$workers" --size-at-original-resolution --encodings "$subset/encodings.csv" \
+  > runtime/round4_2_materialize.json
+"$python" -m deepfake_detection.data.round2 merge \
+  --base-catalog "$base_catalog" --additions-catalog "$subset/additions_materialized.csv" \
+  --output "$subset/catalog.csv" > runtime/round4_3_merge.json
+# Build once to obtain post-canonicalization fingerprints for leakage pruning. The
+# collisions it may report are what pruning removes; the final build must pass.
+"$python" -m deepfake_detection.data.cli build --allow-audit-failures \
+  --config configs/datasets/df40_openworld_round4.yaml > runtime/round4_4_manifest_unpruned.json
+unpruned="$("$python" -c \
+  "import json; print(json.load(open('runtime/round4_4_manifest_unpruned.json'))['manifest'])")"
+"$python" -m deepfake_detection.data.round4 prune \
+  --catalog "$subset/additions_materialized.csv" --manifest-dir "$(dirname "$unpruned")" \
+  --data-root "$data_root" "${references[@]}" --workers "$workers" \
+  --output "$subset/additions_pruned.csv" > runtime/round4_5_prune.json
+"$python" -m deepfake_detection.data.round2 merge \
+  --base-catalog "$base_catalog" --additions-catalog "$subset/additions_pruned.csv" \
+  --output "$subset/catalog.csv" > runtime/round4_6_merge_final.json
+"$python" -m deepfake_detection.data.cli build \
+  --config configs/datasets/df40_openworld_round4.yaml > runtime/round4_7_manifest.json
+manifest="$("$python" -c \
+  "import json; print(json.load(open('runtime/round4_7_manifest.json'))['manifest'])")"
+"$python" -m deepfake_detection.data.round4 audit \
+  --manifest-dir "$(dirname "$manifest")" --base-manifest-dir "$base_manifest" \
+  --data-root "$data_root" "${references[@]}" --workers "$workers" \
+  --output reports/openworld/round4_audit.json > runtime/round4_8_audit.json
+"$python" -m deepfake_detection.data.round4 freeze-config \
+  --base-config configs/training/openworld/e9_l14_round3.yaml \
+  --manifest-dir "$(dirname "$manifest")" \
+  --output configs/training/openworld/e10_photos_l14_round4.yaml > runtime/round4_9_config.json
+echo "$manifest"

@@ -271,8 +271,12 @@ def prune_evaluation_overlaps(catalog: Path, manifest_dir: Path, data_root: Path
 
 
 def audit(manifest_dir: Path, data_root: Path, base_dir: Path, references: list[Reference], *,
-          threshold: float = NEAR_DUPLICATE_CORRELATION, workers: int = 8) -> dict:
-    """Lineage audit of the round 3 manifest and separation of its training rows."""
+          threshold: float = NEAR_DUPLICATE_CORRELATION, workers: int = 8,
+          protocol: str = PROTOCOL_ROUND3) -> dict:
+    """Lineage audit of the round 3 manifest and separation of its training rows.
+
+    Round 4 passes its own protocol, with round 3's manifest as ``base_dir``.
+    """
     rows = _read_manifest(manifest_dir)
     base_ids = {row["source_id"] for row in _read_manifest(base_dir)}
     training = [row for row in rows if row["split"] == "train"]
@@ -299,7 +303,7 @@ def audit(manifest_dir: Path, data_root: Path, base_dir: Path, references: list[
     overlap["lineage_video_ids"] = shared
     if shared:
         failures.append(f"{len(shared)} addition lineage values occur in evaluation")
-    lineage = audit_unseen_manifest(manifest_dir, method_roles(PROTOCOL_ROUND3))
+    lineage = audit_unseen_manifest(manifest_dir, method_roles(protocol))
     failures.extend(lineage["failures"])
     namespaces = Counter(row["lineage_video_ids"].split("|")[0].split(":")[0]
                          for row in training if row["label"] == "REAL")

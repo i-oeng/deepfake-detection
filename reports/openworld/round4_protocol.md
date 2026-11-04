@@ -230,6 +230,25 @@ separate them (next list).
     that collection perfectly. Its reference is the fakes, and every FFHQ real is
     encoded at quality 90, 4:2:0.
 
+#### Photo build
+
+`data/round4.py` and `scripts/rebuild-round4` (2026-11-04) add part B to round 3's
+catalog, which stays byte for byte unchanged: the round 4 audit checks that every
+round 3 row keeps its path, label, split and fingerprints.
+
+- `round4_openfake`: one fake method per OpenFake family, up to 2,000 faces each
+  in the order of a seeded hash (seed `round4-20261104`). Families with fewer than
+  200 faces (Kolors, nano-banana, Seedream and three amateur-photography
+  fine-tunes) share `openfake_rare`, so a few dozen images are not sampled as
+  often as a whole family. The reals are every LAION and Pexels face.
+- `round4_sfhq`: one fake method per SFHQ-T2I model, against the FFHQ faces.
+- Rows whose prompt names a public figure (2,744 fakes, 1,816 reals) are held
+  back for part A, which waits for the identity audit.
+- LAION, Pexels and FFHQ are separate lineage namespaces, so the real balance
+  gives each the same share of the real sampling mass as FF++ and FairFace (a
+  fifth each). The 21 new fake methods join round 3's 23, so photos take about
+  half of the fake mass outside the self-blends.
+
 ### Leakage control
 
 As in round 3: a whole video group is removed on an exact file, decoded pixel,
@@ -390,6 +409,16 @@ advances, provided that, against E9 on the same split:
 
 If neither candidate qualifies, fresh v4 stays unscored.
 
+**E10-photos (development step).** Before the celebrity collections exist, E9's
+recipe is trained on round 3 plus part B alone
+(`configs/training/openworld/e10_photos_l14_round4.yaml`,
+`scripts/run-round4-photos`, three seeds) and compared with E9 on retired sets
+only (`scripts/compare_round4_photos.py`): fresh v2's `dff`, `celebdf_video` and
+`sfhq_t2i`, and fresh v3's `openfake` restricted to OpenFake train-split
+generators, with the threshold rule below and round 3's FF++ and real-source bias
+guardrails. It measures what the photo data does; it is not the protocol's E10,
+and fresh v4 stays unscored.
+
 Reported for every candidate, not gated: the **source-format gap**, the AUROC of
 fakes from PNG sources minus that of fakes from JPEG sources, each against the
 same reals, on `openfake` validation. A gap above 0.05 means the model reads the
@@ -456,8 +485,8 @@ Before the protocol freezes:
    recorded `jpeg_quality` and `subsampling`, and the source-format gap in the
    open-world comparison. Partly done: `data/format_match.py` assigns the pairs,
    `openworld materialize --encodings` applies them before detection, and the
-   fresh v4 catalog (`data/fresh_v4.py`) uses them. The training manifest build
-   and the gap remain.
+   fresh v4 catalog (`data/fresh_v4.py`) and the photo training build
+   (`data/round4.py`) use them. The gap in the comparison remains.
 8. Run the torch tests in CI, since most of the above is torch code. Done: the
    `torch` job in `.github/workflows/ci.yml` installs CPU torch 2.14.1 (the
    training machine's release), OpenCV, httpx and ffmpeg and fails if any test

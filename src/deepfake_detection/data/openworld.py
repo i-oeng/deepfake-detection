@@ -35,6 +35,19 @@ PROTOCOL_ROUND2 = "df40_openworld_round2"
 PROTOCOL_ROUND3 = "df40_openworld_round3"
 ROUND2_TRAIN_METHODS = {"kandinsky22", "sana600m", "recon_movq", "recon_dcae"}
 ROUND2_VALIDATION_METHODS = {"stable_cascade_lite"}
+# Round 4 keeps round 3 and adds AI-generated photos of people (data/round4.py):
+# OpenFake train-split generator families, its rarest families pooled, and the
+# SFHQ-T2I models.
+PROTOCOL_ROUND4 = "df40_openworld_round4"
+ROUND4_OPENFAKE_FAMILIES = (
+    "dalle", "flux1", "flux2", "gpt_image", "grok", "hidream", "ideogram", "imagen",
+    "midjourney", "playground", "qwen", "sd1", "sd2", "sd3", "sdxl", "rare",
+)
+ROUND4_SFHQ_MODELS = ("dalle3", "flux1_dev", "flux1_pro", "flux1_schnell", "sdxl")
+ROUND4_TRAIN_METHODS = {
+    *(f"openfake_{family}" for family in ROUND4_OPENFAKE_FAMILIES),
+    *(f"sfhq_{model}" for model in ROUND4_SFHQ_MODELS),
+}
 
 # DF40 training archives contain FF++ training clips only.
 TRAIN_METHODS = {
@@ -114,14 +127,16 @@ JPEG_QUALITY = 90
 
 def method_roles(protocol: str = PROTOCOL_V1) -> dict[str, set[str]]:
     """Fake methods allowed in each split, for the lineage audit."""
-    if protocol not in {PROTOCOL_V1, PROTOCOL_ROUND2, PROTOCOL_ROUND3}:
+    if protocol not in {PROTOCOL_V1, PROTOCOL_ROUND2, PROTOCOL_ROUND3, PROTOCOL_ROUND4}:
         raise ValueError(f"unknown open-world protocol: {protocol}")
     roles: dict[str, set[str]] = {"train": set(TRAIN_METHODS), "validation": set(), "test": set()}
     for method, (split, _, _) in (*EVAL_METHODS.items(), *EXTERNAL.items(), ("e4e", E4E)):
         roles[split].add(method)
-    if protocol in {PROTOCOL_ROUND2, PROTOCOL_ROUND3}:
+    if protocol in {PROTOCOL_ROUND2, PROTOCOL_ROUND3, PROTOCOL_ROUND4}:
         roles["train"].update(ROUND2_TRAIN_METHODS)
         roles["validation"].update(ROUND2_VALIDATION_METHODS)
+    if protocol == PROTOCOL_ROUND4:
+        roles["train"].update(ROUND4_TRAIN_METHODS)
     return roles
 
 

@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# Round 4 photo development run on xixi: train E10-photos (E9's recipe on the round 4
+# photo manifest, scripts/rebuild-round4) on three seeds, score each on the retired
+# fresh v2 and v3 sets, and compare with E9 (scripts/compare_round4_photos.py).
+# Fresh v4 stays unscored. Resumable seed by seed. Needs the whole GPU: stop the
+# resell bot's Ollama first.
+set -euo pipefail
+umask 0007
+project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$project_root"
+export PYTHONPATH="$project_root/src"
+python="${PYTHON:-$HOME/deepfake-detection/.venv/bin/python}"
+config=configs/training/openworld/e10_photos_l14_round4.yaml
+fresh_v2=configs/evaluation/openworld_fresh_v2.yaml
+fresh_v3=configs/evaluation/openworld_fresh_v3.yaml
+art=artifacts/openworld
+runtime=runtime/round4_photos
+seeds=(20261007 20261008 20261009)
+mkdir -p "$runtime" "$art/fresh-v2" "$art/fresh-v3"
+
+used="$(nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits | head -n 1)"
+if (( used > 1500 )); then
+  echo "GPU already holds ${used} MiB; stop Ollama (sudo systemctl stop ollama) first" >&2
+  exit 3
+fi
+"$python" - <<'PY'
+import json
+from pathlib import Path
+
+if not json.loads(Path("reports/openworld/round4_audit.json").read_text())["passed"]:
+    raise SystemExit("Round 4 audit did not pass")
+PY
+
+e9_runs=(
+  "$art/clip_vit_l14-20261007-e4dd0240af9df4c60b0c-884b6a15-a86b1027"
+  "$art/clip_vit_l14-20261008-e4dd0240af9df4c60b0c-884b6a15-050bb542"
+  "$art/clip_vit_l14-20261009-e4dd0240af9df4c60b0c-884b6a15-5ae68a8e"
+)
+score() {  # run_dir output evaluation_config
+  if [[ ! -f "$2/test_report.json" ]]; then
+    "$python" -m deepfake_detection.train.openworld score-manifest \
+      --run-dir "$1" --evaluation-config "$3" --output "$2"
+  fi
+}
+args=()
+for index in 0 1 2; do
+  seed="${seeds[$index]}"
+  result="$runtime/e10_photos-$seed.json"
+  if [[ ! -f "$result" ]]; then
+    log="$runtime/e10_photos-$seed.log"
+    # Run as a module: Python 3.14 DataLoader workers re-import __main__.
+    "$python" -m deepfake_detection.train.openworld train --config "$config" --seed "$seed" \
+      | tee "$log"
+    # Epoch records are one-line JSON; the final result is the indented object.
+    LOG="$log" RESULT="$result" "$python" -c '
+import json, os
+from pathlib import Path
+text = "\n" + Path(os.environ["LOG"]).read_text()
+result = json.loads(text[text.rindex("\n{\n") + 1:])
+Path(os.environ["RESULT"]).write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")'
+  fi
+  run_dir="$(RESULT="$result" "$python" -c \
+    'import json,os; print(json.load(open(os.environ["RESULT"]))["run_dir"])')"
+  score "$run_dir" "$art/fresh-v2/e10_photos-$seed" "$fresh_v2"
+  score "$run_dir" "$art/fresh-v3/e10_photos-$seed" "$fresh_v3"
+  args+=(--run "e9=${e9_runs[$index]}" --fresh-v2 "e9=$art/fresh-v2/e9-$seed/test.jsonl"
+         --fresh-v3 "e9=$art/fresh-v3/e9-$seed/test.jsonl"
+         --run "e10_photos=$run_dir"
+         --fresh-v2 "e10_photos=$art/fresh-v2/e10_photos-$seed/test.jsonl"
+         --fresh-v3 "e10_photos=$art/fresh-v3/e10_photos-$seed/test.jsonl")
+done
+"$python" scripts/compare_round4_photos.py "${args[@]}" \
+  --output reports/openworld/round4_photos_comparison.json \
+  --markdown reports/openworld/round4_photos_comparison.md

@@ -32,6 +32,7 @@ from deepfake_detection.data.config import find_project_root
 from deepfake_detection.data.openworld import (
     PROTOCOL_ROUND2,
     PROTOCOL_ROUND3,
+    PROTOCOL_ROUND4,
     PROTOCOL_V1,
     method_roles,
 )
@@ -49,7 +50,7 @@ from .evaluation import report as domain_report
 from .loop import _seed_worker
 from .sbi import self_blend
 
-PROTOCOLS = frozenset((PROTOCOL_V1, PROTOCOL_ROUND2, PROTOCOL_ROUND3))
+PROTOCOLS = frozenset((PROTOCOL_V1, PROTOCOL_ROUND2, PROTOCOL_ROUND3, PROTOCOL_ROUND4))
 CLIP_REPOSITORIES = {
     "clip_vit_b16": "openai/clip-vit-base-patch16",
     "clip_vit_l14": "openai/clip-vit-large-patch14",
