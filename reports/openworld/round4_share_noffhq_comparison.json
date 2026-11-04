@@ -1,0 +1,560 @@
+{
+  "baseline": "e9",
+  "candidate": "e10_share_noffhq",
+  "decision": {
+    "advances": true,
+    "ff_auroc_change": -0.009070707070707007,
+    "real_source_bias_change": 0.010296136244067777,
+    "rule": {
+      "maximum_bias_rise": 0.03,
+      "maximum_ff_auroc_drop": 0.01
+    },
+    "target_mean_auroc_change": 0.03673603322571295
+  },
+  "models": {
+    "e10_share_noffhq": {
+      "balanced_accuracy": {
+        "celebdf_video": {
+          "balanced_accuracy": 0.7089810430863825,
+          "interval": [
+            0.6875815338861673,
+            0.7298491566089201
+          ],
+          "tnr": 0.9521857923497268,
+          "tpr": 0.4657762938230384,
+          "videos": {
+            "fake": 599,
+            "real": 732
+          }
+        },
+        "dff": {
+          "balanced_accuracy": 0.7409272856195247,
+          "interval": [
+            0.729811981060866,
+            0.751651455888744
+          ],
+          "tnr": 0.9774011299435028,
+          "tpr": 0.5044534412955466,
+          "videos": {
+            "fake": 2470,
+            "real": 708
+          }
+        },
+        "openfake": {
+          "balanced_accuracy": 0.569137385897337,
+          "interval": [
+            0.5528839714423712,
+            0.5862573514788192
+          ],
+          "tnr": 0.9718969555035128,
+          "tpr": 0.1663778162911612,
+          "videos": {
+            "fake": 577,
+            "real": 427
+          }
+        },
+        "sfhq_t2i": {
+          "balanced_accuracy": 0.4540685131195335,
+          "interval": [
+            0.4441100583090379,
+            0.46498177842565597
+          ],
+          "tnr": 0.837,
+          "tpr": 0.07113702623906705,
+          "videos": {
+            "fake": 1715,
+            "real": 2000
+          }
+        }
+      },
+      "openfake_generators": {
+        "dalle-3": {
+          "auroc": 0.8185987509758001,
+          "videos": 12
+        },
+        "flux-1.1-pro": {
+          "auroc": 0.672311295262115,
+          "videos": 13
+        },
+        "flux.1-dev": {
+          "auroc": 0.5803107328497172,
+          "videos": 41
+        },
+        "flux.1-schnell": {
+          "auroc": 0.5230288836846214,
+          "videos": 21
+        },
+        "flux.2-dev": {
+          "auroc": 0.607728337236534,
+          "videos": 19
+        },
+        "flux.2-klein-4b": {
+          "auroc": 0.6544691647150663,
+          "videos": 12
+        },
+        "flux.2-klein-base-4b": {
+          "auroc": 0.6962955077709176,
+          "videos": 11
+        },
+        "gpt-image-1": {
+          "auroc": 0.7568306010928961,
+          "videos": 24
+        },
+        "hidream-i1-full": {
+          "auroc": 0.6438753691070156,
+          "videos": 23
+        },
+        "ideogram-3.0": {
+          "auroc": 0.716361507345114,
+          "videos": 22
+        },
+        "imagen-3.0-002": {
+          "auroc": 0.6542154566744731,
+          "videos": 10
+        },
+        "mystic": {
+          "auroc": 0.7222872755659641,
+          "videos": 12
+        },
+        "one-obsession-17-red-sdxl": {
+          "auroc": 0.8230785607834789,
+          "videos": 11
+        },
+        "playground-v2.5-1024px-aesthetic": {
+          "auroc": 0.8618266978922716,
+          "videos": 10
+        },
+        "sd-1.5": {
+          "auroc": 0.8370236321055993,
+          "videos": 11
+        },
+        "sd-1.5-dreamshaper": {
+          "auroc": 0.9129231424313392,
+          "videos": 11
+        },
+        "sd-1.5-epicdream": {
+          "auroc": 0.8307512159971177,
+          "videos": 13
+        },
+        "sd-3.5": {
+          "auroc": 0.7213862175494544,
+          "videos": 47
+        },
+        "sdxl": {
+          "auroc": 0.9152447864391658,
+          "videos": 21
+        },
+        "sdxl-epic-realism": {
+          "auroc": 0.5819672131147541,
+          "videos": 24
+        },
+        "sdxl-juggernaut": {
+          "auroc": 0.6825025092004015,
+          "videos": 14
+        },
+        "sdxl-realvis-v5": {
+          "auroc": 0.8423336547733847,
+          "videos": 17
+        },
+        "sdxl-touchofrealism": {
+          "auroc": 0.6904161412358134,
+          "videos": 13
+        },
+        "stable-diffusion-v1-5": {
+          "auroc": 0.9112412177985948,
+          "videos": 10
+        },
+        "stable-diffusion-xl-base-1.0": {
+          "auroc": 0.7788056206088994,
+          "videos": 10
+        }
+      },
+      "real_fpr": {
+        "cdf": 0.03205128205128205,
+        "celebdf_video": 0.04781420765027322,
+        "dff": 0.022598870056497175,
+        "ff": 0.0,
+        "lfw": 0.0625,
+        "openfake": 0.02810304449648712,
+        "openfake_reddit": 0.15,
+        "sfhq_t2i": 0.163,
+        "stable_cascade_lite": 0.155,
+        "stargan": 0.214,
+        "styleclip": 0.1977800201816347,
+        "whichfaceisreal": 0.177
+      },
+      "round3_threshold": 0.6890266894993916,
+      "round3_threshold_balanced_accuracy": {
+        "celebdf_video": {
+          "balanced_accuracy": 0.6655765072935766,
+          "interval": [
+            0.6454667159290985,
+            0.6851549029803772
+          ],
+          "tnr": 0.9672131147540983,
+          "tpr": 0.3639398998330551,
+          "videos": {
+            "fake": 599,
+            "real": 732
+          }
+        },
+        "dff": {
+          "balanced_accuracy": 0.6942467805759509,
+          "interval": [
+            0.6843323269059219,
+            0.7042601614858528
+          ],
+          "tnr": 0.9901129943502824,
+          "tpr": 0.39838056680161943,
+          "videos": {
+            "fake": 2470,
+            "real": 708
+          }
+        },
+        "openfake": {
+          "balanced_accuracy": 0.5558813859947479,
+          "interval": [
+            0.5408456077831308,
+            0.5715259823280393
+          ],
+          "tnr": 0.9765807962529274,
+          "tpr": 0.13518197573656845,
+          "videos": {
+            "fake": 577,
+            "real": 427
+          }
+        },
+        "sfhq_t2i": {
+          "balanced_accuracy": 0.449368804664723,
+          "interval": [
+            0.4409956268221574,
+            0.45824271137026235
+          ],
+          "tnr": 0.869,
+          "tpr": 0.029737609329446066,
+          "videos": {
+            "fake": 1715,
+            "real": 2000
+          }
+        }
+      },
+      "target_auroc": {
+        "celebdf_video": 0.857024914018811,
+        "dff": 0.9119014520906848,
+        "openfake": 0.7313508862362458,
+        "sfhq_t2i": 0.7503691134370426
+      },
+      "target_mean_auroc": 0.812661591445696,
+      "threshold": {
+        "domains": [
+          "celebdf_video",
+          "dff",
+          "openfake",
+          "sfhq_t2i"
+        ],
+        "real_sources": [
+          "cdf",
+          "celebdf_video",
+          "dff",
+          "ff",
+          "lfw",
+          "openfake",
+          "sfhq_t2i",
+          "stable_cascade_lite",
+          "stargan",
+          "styleclip",
+          "whichfaceisreal"
+        ],
+        "target_fpr": 0.1,
+        "threshold": 0.655215115700725,
+        "validation_mean_balanced_accuracy": 0.6182785569306944,
+        "validation_real_fpr": 0.09998612949419766
+      },
+      "validation": {
+        "domain_mean_auroc": {
+          "cdf": 0.9512259162682892,
+          "ff": 0.9643434343434344,
+          "stable_cascade_lite": 0.762749,
+          "stargan": 0.9808021354688021,
+          "styleclip": 0.9792539522367978,
+          "whichfaceisreal": 0.879845
+        },
+        "ff_auroc": 0.9643434343434344,
+        "real_source_bias": 0.6733078823004556,
+        "seeds": 3
+      }
+    },
+    "e9": {
+      "balanced_accuracy": {
+        "celebdf_video": {
+          "balanced_accuracy": 0.7071599295729677,
+          "interval": [
+            0.6859884871872064,
+            0.7278011166151236
+          ],
+          "tnr": 0.953551912568306,
+          "tpr": 0.4607679465776294,
+          "videos": {
+            "fake": 599,
+            "real": 732
+          }
+        },
+        "dff": {
+          "balanced_accuracy": 0.7401084196802306,
+          "interval": [
+            0.7287815366316704,
+            0.7510304444291955
+          ],
+          "tnr": 0.9830508474576272,
+          "tpr": 0.497165991902834,
+          "videos": {
+            "fake": 2470,
+            "real": 708
+          }
+        },
+        "openfake": {
+          "balanced_accuracy": 0.5520640963718498,
+          "interval": [
+            0.5361150909777213,
+            0.5685752438316577
+          ],
+          "tnr": 0.9672131147540983,
+          "tpr": 0.1369150779896014,
+          "videos": {
+            "fake": 577,
+            "real": 427
+          }
+        },
+        "sfhq_t2i": {
+          "balanced_accuracy": 0.43283163265306124,
+          "interval": [
+            0.4250816326530612,
+            0.4412478134110787
+          ],
+          "tnr": 0.8575,
+          "tpr": 0.00816326530612245,
+          "videos": {
+            "fake": 1715,
+            "real": 2000
+          }
+        }
+      },
+      "openfake_generators": {
+        "dalle-3": {
+          "auroc": 0.742583918813427,
+          "videos": 12
+        },
+        "flux-1.1-pro": {
+          "auroc": 0.6366420464781121,
+          "videos": 13
+        },
+        "flux.1-dev": {
+          "auroc": 0.47175415548066485,
+          "videos": 41
+        },
+        "flux.1-schnell": {
+          "auroc": 0.4595182335229174,
+          "videos": 21
+        },
+        "flux.2-dev": {
+          "auroc": 0.5269320843091335,
+          "videos": 19
+        },
+        "flux.2-klein-4b": {
+          "auroc": 0.5956284153005464,
+          "videos": 12
+        },
+        "flux.2-klein-base-4b": {
+          "auroc": 0.5809027038535235,
+          "videos": 11
+        },
+        "gpt-image-1": {
+          "auroc": 0.6880366900858704,
+          "videos": 24
+        },
+        "hidream-i1-full": {
+          "auroc": 0.5674065777415742,
+          "videos": 23
+        },
+        "ideogram-3.0": {
+          "auroc": 0.6316265701511603,
+          "videos": 22
+        },
+        "imagen-3.0-002": {
+          "auroc": 0.5716627634660422,
+          "videos": 10
+        },
+        "mystic": {
+          "auroc": 0.6687158469945356,
+          "videos": 12
+        },
+        "one-obsession-17-red-sdxl": {
+          "auroc": 0.7091760698318076,
+          "videos": 11
+        },
+        "playground-v2.5-1024px-aesthetic": {
+          "auroc": 0.7471896955503513,
+          "videos": 10
+        },
+        "sd-1.5": {
+          "auroc": 0.8113689589099425,
+          "videos": 11
+        },
+        "sd-1.5-dreamshaper": {
+          "auroc": 0.882903981264637,
+          "videos": 11
+        },
+        "sd-1.5-epicdream": {
+          "auroc": 0.8345343181408755,
+          "videos": 13
+        },
+        "sd-3.5": {
+          "auroc": 0.6739249588918232,
+          "videos": 47
+        },
+        "sdxl": {
+          "auroc": 0.885413181666109,
+          "videos": 21
+        },
+        "sdxl-epic-realism": {
+          "auroc": 0.5267857142857143,
+          "videos": 24
+        },
+        "sdxl-juggernaut": {
+          "auroc": 0.6150050184008029,
+          "videos": 14
+        },
+        "sdxl-realvis-v5": {
+          "auroc": 0.8053450888552142,
+          "videos": 17
+        },
+        "sdxl-touchofrealism": {
+          "auroc": 0.6257431093496667,
+          "videos": 13
+        },
+        "stable-diffusion-v1-5": {
+          "auroc": 0.8853629976580796,
+          "videos": 10
+        },
+        "stable-diffusion-xl-base-1.0": {
+          "auroc": 0.7091334894613583,
+          "videos": 10
+        }
+      },
+      "real_fpr": {
+        "cdf": 0.038461538461538464,
+        "celebdf_video": 0.04644808743169399,
+        "dff": 0.01694915254237288,
+        "ff": 0.0,
+        "lfw": 0.0625,
+        "openfake": 0.03278688524590164,
+        "openfake_reddit": 0.15,
+        "sfhq_t2i": 0.1425,
+        "stable_cascade_lite": 0.143,
+        "stargan": 0.236,
+        "styleclip": 0.22300706357214933,
+        "whichfaceisreal": 0.151
+      },
+      "round3_threshold": 0.7041601384435929,
+      "round3_threshold_balanced_accuracy": {
+        "celebdf_video": {
+          "balanced_accuracy": 0.6620859446983589,
+          "interval": [
+            0.6422794821971044,
+            0.6812093470903235
+          ],
+          "tnr": 0.9685792349726776,
+          "tpr": 0.3555926544240401,
+          "videos": {
+            "fake": 599,
+            "real": 732
+          }
+        },
+        "dff": {
+          "balanced_accuracy": 0.6972832178229145,
+          "interval": [
+            0.6868604039433656,
+            0.707409249982845
+          ],
+          "tnr": 0.9901129943502824,
+          "tpr": 0.40445344129554656,
+          "videos": {
+            "fake": 2470,
+            "real": 708
+          }
+        },
+        "openfake": {
+          "balanced_accuracy": 0.5454827724765503,
+          "interval": [
+            0.5315712783962919,
+            0.5605185506881674
+          ],
+          "tnr": 0.9765807962529274,
+          "tpr": 0.11438474870017332,
+          "videos": {
+            "fake": 577,
+            "real": 427
+          }
+        },
+        "sfhq_t2i": {
+          "balanced_accuracy": 0.4479985422740525,
+          "interval": [
+            0.44091472303207,
+            0.4555393586005831
+          ],
+          "tnr": 0.889,
+          "tpr": 0.006997084548104956,
+          "videos": {
+            "fake": 1715,
+            "real": 2000
+          }
+        }
+      },
+      "target_auroc": {
+        "celebdf_video": 0.8571321054216043,
+        "dff": 0.9234696915903635,
+        "openfake": 0.6643017464962517,
+        "sfhq_t2i": 0.6587986893717127
+      },
+      "target_mean_auroc": 0.7759255582199831,
+      "threshold": {
+        "domains": [
+          "celebdf_video",
+          "dff",
+          "openfake",
+          "sfhq_t2i"
+        ],
+        "real_sources": [
+          "cdf",
+          "celebdf_video",
+          "dff",
+          "ff",
+          "lfw",
+          "openfake",
+          "sfhq_t2i",
+          "stable_cascade_lite",
+          "stargan",
+          "styleclip",
+          "whichfaceisreal"
+        ],
+        "target_fpr": 0.1,
+        "threshold": 0.6706347635663255,
+        "validation_mean_balanced_accuracy": 0.6080410195695274,
+        "validation_real_fpr": 0.09933206611396876
+      },
+      "validation": {
+        "domain_mean_auroc": {
+          "cdf": 0.9566037109469313,
+          "ff": 0.9734141414141414,
+          "stable_cascade_lite": 0.7058091666666666,
+          "stargan": 0.9819596262929596,
+          "styleclip": 0.9757193070972082,
+          "whichfaceisreal": 0.8720583333333334
+        },
+        "ff_auroc": 0.9734141414141414,
+        "real_source_bias": 0.6630117460563878,
+        "seeds": 3
+      }
+    }
+  }
+}

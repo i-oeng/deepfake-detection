@@ -450,6 +450,18 @@ run now trains on. Two follow-ups use the same comparison: **E10-share**
 the mass, so round 3's data keeps its relative weights, and **E10-share-noffhq**
 also drops the 9,000 FFHQ reals.
 
+**Follow-up results (2026-11-05).** E10-share narrows the FF++ drop to 0.017
+with a target mean AUROC gain of 0.070, and still does not advance
+(`round4_share_comparison.md`). E10-share-noffhq advances by the rule (FF++
+-0.009, bias +0.010, target mean AUROC +0.037, `round4_share_noffhq_comparison.md`)
+and WhichFaceIsReal recovers to 0.880, but Stable Cascade falls back to 0.763 and
+`sfhq_t2i` to 0.750 AUROC, and balanced accuracy is within 0.03 of E9 on every
+target domain. Stable Cascade, WhichFaceIsReal and `sfhq_t2i` all take their reals
+from FFHQ, so most of E10-photos' gain on them came from scoring FFHQ-style faces
+as real. Fresh v4 has no FFHQ reals. The gain that survives is on `openfake` (0.664
+to 0.731) and is small; training loss stays near 0.58 and each photo is seen less
+than once at 6 x 8,000 samples, so E10-long is the next test.
+
 Reported for every candidate, not gated: the **source-format gap**, the AUROC of
 fakes from PNG sources minus that of fakes from JPEG sources, each against the
 same reals, on `openfake` validation. A gap above 0.05 means the model reads the
