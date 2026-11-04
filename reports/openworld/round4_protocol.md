@@ -438,6 +438,18 @@ generators, with the threshold rule below and round 3's FF++ and real-source bia
 guardrails. It measures what the photo data does; it is not the protocol's E10,
 and fresh v4 stays unscored.
 
+**E10-photos result (2026-11-04, `round4_photos_comparison.md`).** The mean
+target AUROC rose from 0.776 to 0.863 (`sfhq_t2i` 0.659 to 0.956, `openfake`
+0.664 to 0.742, `celebdf_video` unchanged at 0.857, `dff` 0.923 to 0.897) and the
+real-source bias fell by 0.199, but FF++ validation AUROC fell by 0.028, so
+E10-photos does not advance. The additions took 56% of the sampling mass (FF++
+reals 0.25 to 0.10); FF++ real frames moved toward fake, and WhichFaceIsReal fell
+every epoch (0.87 to 0.79) as its StyleGAN fakes moved toward the FFHQ reals the
+run now trains on. Two follow-ups use the same comparison: **E10-share**
+(`e10_share_l14_round4.yaml`) samples the additions as their own group at 30% of
+the mass, so round 3's data keeps its relative weights, and **E10-share-noffhq**
+also drops the 9,000 FFHQ reals.
+
 Reported for every candidate, not gated: the **source-format gap**, the AUROC of
 fakes from PNG sources minus that of fakes from JPEG sources, each against the
 same reals, on `openfake` validation. A gap above 0.05 means the model reads the
