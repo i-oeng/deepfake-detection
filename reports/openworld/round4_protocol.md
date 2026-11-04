@@ -249,6 +249,25 @@ round 3 row keeps its path, label, split and fingerprints.
   fifth each). The 21 new fake methods join round 3's 23, so photos take about
   half of the fake mass outside the self-blends.
 
+Built on xixi on 2026-11-04 as manifest `e200221fc8588353e95a`
+([`round4_audit.json`](round4_audit.json); a trial build in a separate folder gave
+the same manifest):
+
+- The catalog selects 56,428 faces: 25,081 OpenFake fakes (822 to 2,000 per
+  method), 9,063 SFHQ fakes, and 5,842 LAION, 7,442 Pexels and 9,000 FFHQ reals.
+  Format matching JPEG-encodes 12,994 OpenFake fakes and 165 of its reals (OpenFake's
+  reals are the reference, 13,119 JPEG sources against the fakes' 12,087) and all
+  9,000 FFHQ reals at SFHQ's quality 90, 4:2:0. Because the fakes' own JPEG
+  qualities cannot be removed, the two labels' pair distributions stay 0.07 apart
+  in OpenFake, against 0.0076 in fresh v4's seen slice.
+- Re-detection on the stored crops keeps 55,403. Scale matching sets OpenFake's
+  target eye distance to 50 px, set by LAION's small faces, so OpenFake fakes and
+  Pexels reals train at reduced detail; SFHQ's is 154 px.
+- Pruning removes 12 additions that repeat an evaluation image (8 by dHash, 1
+  exact file, 3 by thumbnail correlation), leaving 55,391 and 160,428 rows in all.
+  The audit passes with every round 3 row unchanged; training reals are FF++
+  24,370, FairFace 7,976, FFHQ 8,995, Pexels 7,326 and LAION 5,604.
+
 ### Leakage control
 
 As in round 3: a whole video group is removed on an exact file, decoded pixel,
